@@ -80,6 +80,11 @@ def test_public_shell_and_static_assets_are_separated():
         thread.join()
 
 
+def test_source_renderer_tolerates_bootstrap_without_categories():
+    frontend_script = (PUBLIC_ROOT / "static" / "app.js").read_text(encoding="utf-8")
+    assert "(source.categories || [])" in frontend_script
+
+
 def test_public_bootstrap_reports_categories_and_account_state():
     service = InMemoryPlatformService(builtin_collections())
     service.repository = InMemoryRepositoryLayer()

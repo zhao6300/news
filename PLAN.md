@@ -228,3 +228,16 @@ Acceptance:
 - Login and account views avoid distraction and keep localized copy.
 - Light and dark schemes use consistent color, spacing, radius, and hover cues.
 - No build tool or new dependency is introduced.
+
+## Phase 27 — 宽屏、平板和移动端适配
+
+Scope: 调整前端单壳的版面宽度、分区行为、卡片栏数和紧凑内边距，使宽屏不过度拉伸，平板和手机避免横向溢出。
+
+Acceptance:
+
+- 分类导航在前台所有断点保持横向主导航，不使用标签胶囊。
+- 1240px 以上版面继续使用宽屏内容宽度，但设置最大宽度上限。
+- 1120px 以下允许顶部操作折行，880px 以下内容和来源进入单列。
+- 420px 和 360px 宽度使用紧凑边距并保持表单、正文和页脚可读。
+- 来源渲染可以容忍 bootstrap 来源缺少分类数组，避免前端进入错误状态。
+- 不引入新的前端依赖。

@@ -123,9 +123,9 @@ function renderArticle(article) {
 
 function renderSources(sources) {
   const cards = sources.map((source) => `
-    <a class="card" href="/extensions/${escapeHtml(source.slug)}">
+    <a class="card source-card" href="/extensions/${escapeHtml(source.slug)}">
       <h3 class="card-title">${escapeHtml(source.label)}</h3>
-      <div class="source-cat">${source.categories.map(item => item.label).join(' · ')}<span>${source.article_count}</span></div>
+      <div class="source-cat">${(source.categories || []).map((item) => `<span>${escapeHtml(item.label)}</span>`).join('<span class="source-cat-separator">·</span>')}<span>${source.article_count}</span></div>
     </a>`).join("");
   view.innerHTML = `
     <h1 class="page-heading">内容来源</h1>
