@@ -5,6 +5,7 @@ from app import PortalHandler
 from auth import demo_account_manager
 from scaffold import CategoryGroup
 from services import InMemoryPlatformService
+from storage import InMemoryRepositoryLayer
 from http.server import ThreadingHTTPServer
 
 
@@ -15,6 +16,12 @@ def main() -> None:
     print(f"Loaded {len(extensions[0].entries)} articles across {len(CategoryGroup)} categories.")
 
     service = InMemoryPlatformService(extensions)
+    repository = InMemoryRepositoryLayer()
+    for extension in extensions:
+        for article in extension.entries:
+            repository.add(article)
+    repository.next_id = max(repository.articles, default=0) + 1
+    service.repository = repository
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
 
