@@ -61,7 +61,7 @@ Prepare a source-connector interface and performance baseline.
 
 Acceptance:
 
-- A new source can be added without changing service internals.
+- A new source can be added through registration without changing service internals.
 - Pagination behavior is covered.
 
 ## Phase 08 — Documentation and Operations

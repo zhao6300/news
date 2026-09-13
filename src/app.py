@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from html import escape
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
+from auth import AccountManager
 from services import InMemoryPlatformService
 from scaffold import PlatformExtension
 
@@ -16,6 +17,18 @@ def render_extension_section(extension: PlatformExtension) -> str:
     return f"<section id='{escape(extension.slug)}'><h2>{escape(extension.label)}</h2><ul>{entry_rows}</ul></section>"
 
 
+def render_login_form(message: str | None = None) -> str:
+    notice = f"<p>{escape(message)}</p>" if message else ""
+    return f"""<main><h1>Sign In</h1>{notice}
+<form method='post' action='/login'>
+<label for='email'>Email</label>
+<input id='email' name='email' type='email' required>
+<label for='password'>Password</label>
+<input id='password' name='password' type='password' required>
+<button type='submit'>Sign In</button>
+</form></main>"""
+
+
 def render_html_page(title: str, body: str) -> str:
     return f"""<!doctype html>
 <html lang='en'>
@@ -26,11 +39,7 @@ def render_html_page(title: str, body: str) -> str:
     <style>
         body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 2rem; }}
         h2 {{ margin-top: 2rem; }}
-        a {{ color: black; text-decoration: none; }}
-        a:hover {{ text-decoration: underline; }}
         ul {{ padding-left: 1.2rem; }}
-        section {{ margin-bottom: 3rem; }}
-        footer {{ font-size: 0.85rem; margin-top: 3rem; opacity: 0.7; }}
     </style>
 </head>
 <body>
@@ -41,8 +50,15 @@ def render_html_page(title: str, body: str) -> str:
 
 
 class PortalHandler(BaseHTTPRequestHandler):
-    def __init__(self, service: InMemoryPlatformService, *args: object, **kwargs: object) -> None:
+    def __init__(
+        self,
+        service: InMemoryPlatformService,
+        account_manager: AccountManager,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
         self.service = service
+        self.account_manager = account_manager
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
@@ -56,6 +72,14 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"status": "ok"}')
+        elif path == "/login":
+            self.show_login_page()
+        else:
+            self.show_not_found()
+
+    def do_POST(self) -> None:
+        if urlparse(self.path).path == "/login":
+            self.handle_login()
         else:
             self.show_not_found()
 
@@ -89,8 +113,33 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.wfile.write(html_content.encode("utf-8"))
 
     def show_not_found(self) -> None:
-        html_content = render_html_page("Not Found", f"<main><h1>404</h1><p>The page '{urlparse(self.path).path}' does not exist.</p></main>")
+        path = urlparse(self.path).path
+        html_content = render_html_page("Not Found", f"<main><h1>404</h1><p>{escape(path)} does not exist.</p></main>")
         self.send_response(404)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html_content.encode("utf-8"))
+
+    def show_login_page(self, message: str | None = None, status: int = 200) -> None:
+        html_content = render_html_page("Sign In", render_login_form(message))
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html_content.encode("utf-8"))
+
+    def handle_login(self) -> None:
+        body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        submitted = parse_qs(body.decode("utf-8"))
+        email = submitted.get("email", [""])[0]
+        password = submitted.get("password", [""])[0]
+        if self.account_manager.authenticate(email, password) is None:
+            self.show_login_page("Invalid credentials.", status=401)
+            return
+        html_content = render_html_page(
+            "Signed In",
+            "<main><h1>Welcome back</h1><p>You are signed in to the platform.</p></main>",
+        )
+        self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(html_content.encode("utf-8"))
