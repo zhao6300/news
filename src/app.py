@@ -155,6 +155,7 @@ def _search_url(
     category: CategoryGroup | None = None,
     page: int | None = None,
     page_size: int | None = None,
+    source: str | None = None,
 ) -> str:
     parameters = [("q", query)]
     if category is not None:
@@ -163,6 +164,8 @@ def _search_url(
         parameters.append(("page", page))
     if page_size is not None:
         parameters.append(("page_size", page_size))
+    if source:
+        parameters.append(("source", source))
     return f"/search?{urlencode(parameters)}"
 
 
@@ -170,6 +173,7 @@ def render_search_results(
     query: str,
     result: Page,
     selected_category: CategoryGroup | None = None,
+    selected_source: str | None = None,
 ) -> str:
     if not query:
         heading = "Search"
@@ -182,7 +186,7 @@ def render_search_results(
 <p>{result.total} matching page{'s' if result.total != 1 else ''}</p>
 {render_search_filters(query, selected_category)}
 <div class='article-list'>{render_article_items(result.items)}</div>
-<nav class='pagination'>{render_search_pagination(query, result, selected_category)}</nav>
+<nav class='pagination'>{render_search_pagination(query, result, selected_category, selected_source)}</nav>
     """
     return render_html_page("Search", body)
 
@@ -191,6 +195,7 @@ def render_search_pagination(
     query: str,
     result: Page,
     selected_category: CategoryGroup | None = None,
+    selected_source: str | None = None,
 ) -> str:
     total_pages = max(1, (result.total + result.page_size - 1) // result.page_size)
     if total_pages == 1:
@@ -198,10 +203,10 @@ def render_search_pagination(
     previous_page = max(1, result.page - 1)
     next_page = min(total_pages, result.page + 1)
     links = [
-        f"<a href='{escape(_search_url(query, selected_category, 1, result.page_size))}'>First</a>",
-        f"<a href='{escape(_search_url(query, selected_category, previous_page, result.page_size))}'>Prev</a>",
-        f"<a href='{escape(_search_url(query, selected_category, next_page, result.page_size))}'>Next</a>",
-        f"<a href='{escape(_search_url(query, selected_category, total_pages, result.page_size))}'>Last</a>",
+        f"<a href='{escape(_search_url(query, selected_category, 1, result.page_size, selected_source))}'>First</a>",
+        f"<a href='{escape(_search_url(query, selected_category, previous_page, result.page_size, selected_source))}'>Prev</a>",
+        f"<a href='{escape(_search_url(query, selected_category, next_page, result.page_size, selected_source))}'>Next</a>",
+        f"<a href='{escape(_search_url(query, selected_category, total_pages, result.page_size, selected_source))}'>Last</a>",
     ]
     return f"Page {result.page} of {total_pages} " + " ".join(links)
 
@@ -306,22 +311,6 @@ def render_html_page(
 
 def render_search_page(title: str, body: str) -> str:
     return render_html_page(title, body)
-
-
-def render_search_results(query: str, result: Page, selected_category: CategoryGroup | None = None) -> str:
-    if not query:
-        heading = "Search"
-    elif result.total:
-        heading = f"Search: {query}"
-    else:
-        heading = "No matching content"
-    body = f"""
-<h1>{escape(heading)}</h1>
-<p>{result.total} matching page{'s' if result.total != 1 else ''}</p>
-{render_search_filters(query, selected_category)}
-<div class='article-list'>{render_article_items(result.items)}</div>
-    """
-    return render_html_page("Search", body)
 
 
 class PortalHandler(BaseHTTPRequestHandler):
@@ -547,6 +536,7 @@ class PortalHandler(BaseHTTPRequestHandler):
     def handle_search_api(self) -> None:
         query = parse_qs(urlparse(self.path).query)
         text = query.get("q", [""])[0]
+        source = query.get("source", [""])[0]
         try:
             category = self.search_category(query)
         except KeyError:
@@ -560,6 +550,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         result = self.search_engine.search(
             text,
             category=category,
+            source=source or None,
             page=page,
             page_size=page_size,
         )
@@ -611,13 +602,15 @@ class PortalHandler(BaseHTTPRequestHandler):
         except ValueError:
             self.show_not_found()
             return
+        source = query.get("source", [""])[0]
         result = self.search_engine.search(
             text,
             category=category,
+            source=source or None,
             page_size=page_size,
             page=page,
         )
-        html_content = render_search_results(text, result, category)
+        html_content = render_search_results(text, result, category, source)
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()

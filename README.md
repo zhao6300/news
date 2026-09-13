@@ -62,8 +62,8 @@ RSS sources can be enabled with `PLATFORM_FEEDS`. Each record requires `slug`, `
 - `/health` — process status check.
 - `/api/ingestion` — startup source diagnostics, including item counts and source errors.
 
-Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional `category` slug such as `models`.
-Search result pagination preserves the active `q`, `category`, and `page_size` filters.
+Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional `category` slug such as `models` and an optional `source` name.
+Search result pagination preserves the active `q`, `category`, `source`, and `page_size` filters.
 Article detail pages display publish date, source, category, and stored tags.
 Article cards and the search API include the same collected tags.
 Home dashboard cards use the same article card layout and collected tags.

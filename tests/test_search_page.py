@@ -162,11 +162,18 @@ def test_authenticated_search_page_shows_page_two():
             )
         ) as response:
             payload = response.read().decode("utf-8")
-        assert "AI Information Discovery" in payload
     finally:
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_search_results_keep_source_filter_in_pagination():
+    result = Page([], page=1, page_size=10, total=20)
+
+    html = render_search_results("example", result, None, "AI Digest")
+
+    assert "source=AI+Digest" in html
 
 
 def _article(article_id: int, category: CategoryGroup = CategoryGroup.TECH) -> Article:

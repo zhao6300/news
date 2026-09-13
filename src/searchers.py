@@ -12,6 +12,7 @@ class SearchEngine(ABC):
         self,
         query: str,
         category: CategoryGroup | None = None,
+        source: str | None = None,
         page: int = 1,
         page_size: int = 10,
     ) -> Page:
@@ -22,7 +23,7 @@ class InMemorySearchEngine(SearchEngine):
     def __init__(self, articles: Sequence[Article]) -> None:
         self.articles = list(articles)
 
-    def search(self, query, category=None, page=1, page_size=10) -> Page:
+    def search(self, query, category=None, source=None, page=1, page_size=10) -> Page:
         normalized = query.lower()
         if not normalized:
             return Page([], page, page_size, 0)
@@ -30,6 +31,7 @@ class InMemorySearchEngine(SearchEngine):
             article
             for article in self.articles
             if (category is None or article.category_id == category)
+            and (source is None or article.source == source)
             and any(
                 normalized in text.lower()
                 for text in (article.title, article.summary, article.source, " ".join(article.tags))
