@@ -1,30 +1,41 @@
 import os
+from typing import Sequence
 
 from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import demo_account_manager
 from sessions import SessionManager
-from scaffold import CategoryGroup
+from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
 from searchers import InMemorySearchEngine
-from storage import InMemoryRepositoryLayer
+from storage import InMemoryRepositoryLayer, RepositoryLayer
+from sqlite_store import SQLiteArticleLayer
 from http.server import ThreadingHTTPServer
 
 
-def main() -> None:
+def platform_components(database_path: str | None = None) -> tuple[Sequence, RepositoryLayer, InMemorySearchEngine, InMemoryPlatformService]:
     extensions = builtin_collections()
     if not extensions:
         raise RuntimeError("The platform must load at least one extension.")
-    print(f"Loaded {len(extensions[0].entries)} articles across {len(CategoryGroup)} categories.")
 
+    repository = SQLiteArticleLayer(database_path) if database_path else InMemoryRepositoryLayer()
+    if repository.total == 0:
+        for extension in extensions:
+            for article in extension.entries:
+                repository.add(article)
+        if isinstance(repository, InMemoryRepositoryLayer):
+            repository.next_id = max(repository.articles, default=0) + 1
+    else:
+        extensions = (PlatformExtension(slug="builtin", label="Builtin", entries=repository.all()),)
+
+    search_engine = InMemorySearchEngine(extensions[0].entries)
     service = InMemoryPlatformService(extensions)
-    search_engine = InMemorySearchEngine(extensions[0].entries if extensions else [])
-    repository = InMemoryRepositoryLayer()
-    for extension in extensions:
-        for article in extension.entries:
-            repository.add(article)
-    repository.next_id = max(repository.articles, default=0) + 1
     service.repository = repository
+    return extensions, repository, search_engine, service
+
+
+def main() -> None:
+    _, _, search_engine, service = platform_components(os.getenv("PLATFORM_DB"))
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
 

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from sqlite3 import Connection, connect
+from sqlite3 import connect
 
 from scaffold import Article, CategoryGroup
-from storage import Page
+from storage import Page, RepositoryLayer
 
 
-class SQLiteArticleLayer:
+class SQLiteArticleLayer(RepositoryLayer):
     def __init__(self, database: Path | str = "portal.db") -> None:
         self.database = Path(database)
         self.create()
@@ -54,22 +54,17 @@ class SQLiteArticleLayer:
             )
             db.commit()
 
+    def all(self) -> list[Article]:
+        with connect(self.database) as db:
+            rows = db.execute("SELECT * FROM articles ORDER BY id").fetchall()
+        return [_article_from_row(row) for row in rows]
+
     def get(self, article_id: int) -> Article:
         with connect(self.database) as db:
             row = db.execute("SELECT * FROM articles WHERE id = ?", (article_id,)).fetchone()
         if row is None:
             raise KeyError(article_id)
-        return Article(
-            id=row[0],
-            title=row[1],
-            url=row[2],
-            summary=row[3],
-            tags=tuple(row[4].split(",")),
-            source=row[5],
-            category_id=CategoryGroup(row[6]),
-            rank=row[7],
-            published_at=datetime.fromisoformat(row[8]),
-        )
+        return _article_from_row(row)
 
     def remove(self, article_id: int) -> None:
         with connect(self.database) as db:
@@ -94,23 +89,24 @@ class SQLiteArticleLayer:
                 "SELECT COUNT(*) FROM articles WHERE category_id = ?",
                 (category.value,),
             ).fetchone()[0]
-        items = [
-            Article(
-                id=row[0],
-                title=row[1],
-                url=row[2],
-                summary=row[3],
-                tags=tuple(row[4].split(",")),
-                source=row[5],
-                category_id=CategoryGroup(row[6]),
-                rank=row[7],
-                published_at=datetime.fromisoformat(row[8]),
-            )
-            for row in rows
-        ]
-        return Page(items=items, page=page, page_size=page_size, total=count)
+            items = [_article_from_row(row) for row in rows]
+            return Page(items=items, page=page, page_size=page_size, total=count)
 
     @property
     def total(self) -> int:
         with connect(self.database) as db:
             return db.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+
+
+def _article_from_row(row: tuple) -> Article:
+    return Article(
+        id=row[0],
+        title=row[1],
+        url=row[2],
+        summary=row[3],
+        tags=tuple(tag for tag in row[4].split(",") if tag),
+        source=row[5],
+        category_id=CategoryGroup(row[6]),
+        rank=row[7],
+        published_at=datetime.fromisoformat(row[8]),
+    )
