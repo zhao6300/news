@@ -40,7 +40,7 @@ class Article:
             source=str(record["source"]),
             category_id=CategoryGroup(str(record["category_id"])),
             rank=int(record["rank"]),
-            published_at=record["published_at"],
+            published_at=datetime.fromisoformat(str(record["published_at"])),
         )
 
     @property

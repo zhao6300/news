@@ -30,3 +30,23 @@ def test_service_paginates_articles_from_repository():
     assert [entry.title for entry in page.items] == ["Example"]
     assert page.total == 1
     assert service.get_article(1) == repository.get(1)
+
+
+def test_article_record_repository_preserves_article_fields():
+    record = {
+        "id": 42,
+        "title": "Record round-trip",
+        "url": "https://example.com/42",
+        "summary": "Structured record.",
+        "tags": ["Model", "Evaluation"],
+        "source": "Test Source",
+        "category_id": "models",
+        "rank": 2,
+        "published_at": "2026-02-01T09:00:00+00:00",
+    }
+
+    article = Article.from_record(record)
+
+    assert article.category_id == CategoryGroup.MODELS
+    assert article.tags == ("Model", "Evaluation")
+    assert article.published_at == datetime(2026, 2, 1, 9, tzinfo=UTC)
