@@ -66,6 +66,7 @@ Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional 
 Search result pagination preserves the active `q`, `category`, and `page_size` filters.
 Article detail pages display publish date, source, category, and stored tags.
 Article cards and the search API include the same collected tags.
+Home dashboard cards use the same article card layout and collected tags.
 Search API results include the article source, source URL, and publish timestamp.
 
 ## Known next steps

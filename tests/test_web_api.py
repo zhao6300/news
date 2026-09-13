@@ -45,6 +45,7 @@ def test_extension_sections_are_rendered_through_service():
     builtin = service.get_extension("builtin")
 
     assert "News Intelligence Platform" not in render_extension_section(builtin)
+    assert "<span class='tag'>Research</span>" in render_extension_section(builtin)
 
 
 def test_health_endpoint_is_api_reachable():

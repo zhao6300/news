@@ -24,20 +24,10 @@ from storage import Page
 
 
 def render_extension_section(extension: PlatformExtension) -> str:
-    entry_rows = "".join(
-        f"""
-        <article class='article-card'>
-            <a href='/article/{entry.id}'><strong>{escape(entry.title)}</strong></a>
-            <p>{escape(entry.summary)}</p>
-            <span class='meta'>{escape(entry.published_at_display)} · {escape(entry.source)} · {escape(category_label(entry.category_id))}</span>
-        </article>
-        """
-        for entry in extension.entries
-    )
     return f"""
     <section id='{escape(extension.slug)}'>
         <h2>{escape(extension.label)}</h2>
-        <div class='article-list'>{entry_rows}</div>
+        <div class='article-list'>{render_article_items(extension.entries)}</div>
     </section>
     """
 
