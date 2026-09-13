@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace as dataclass_replace
 from hashlib import pbkdf2_hmac
 from os import getenv
 from secrets import token_hex
-from datetime import datetime
+from datetime import datetime, UTC
+from json import dumps, loads
 from typing import Sequence
 
 
@@ -43,6 +44,72 @@ class Session:
 class AuthenticatedAccount:
     id: int
     email: str
+
+
+@dataclass(frozen=True, slots=True)
+class ModelSubscription:
+    slug: str
+    name: str
+    enabled: bool = True
+
+
+@dataclass(frozen=True)
+class AccountPreferences:
+    slug: str
+    email: str
+    newsletter: bool = False
+    default: str | None = None
+    profile_extra: str = ""
+    registered_at: datetime = datetime(1970, 1, 1, tzinfo=UTC)
+    emails: list[dict[str, object]] = field(default_factory=list)
+    model_subscriptions: list[ModelSubscription] = field(default_factory=list)
+    groups: list[str] = field(default_factory=list)
+
+    def to_json(self) -> str:
+        return dumps(
+            {
+                "slug": self.slug,
+                "email": self.email,
+                "newsletter": self.newsletter,
+                "default": self.default,
+                "profileExtra": self.profile_extra,
+                "registeredAt": self.registered_at.isoformat(),
+                "emails": self.emails,
+                "modelSubscriptions": [
+                    {
+                        "slug": subscription.slug,
+                        "name": subscription.name,
+                        "enabled": subscription.enabled,
+                    }
+                    for subscription in self.model_subscriptions
+                ],
+                "groups": self.groups,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+    @classmethod
+    def from_json(cls, encoded: str) -> AccountPreferences:
+        parsed = loads(encoded)
+        subscriptions = [
+            ModelSubscription(subscription["slug"], subscription["name"], subscription["enabled"])
+            for subscription in parsed.get("modelSubscriptions", [])
+        ]
+        return cls(
+            slug=parsed["slug"],
+            email=parsed["email"],
+            newsletter=parsed.get("newsletter", False),
+            default=parsed.get("default"),
+            profile_extra=parsed.get("profileExtra", ""),
+            registered_at=datetime.fromisoformat(parsed["registeredAt"]),
+            emails=list(parsed.get("emails", [])),
+            model_subscriptions=subscriptions,
+            groups=list(parsed.get("groups", [])),
+        )
+
+    def replace(self, **changes: object) -> AccountPreferences:
+        return dataclass_replace(self, **changes)
 
 
 class AccountManager:
@@ -126,6 +193,7 @@ class AccountAccessManager(AccountManager):
         super().__init__(accounts)
         self.key_to_account: dict[str, Account] = {}
         self.access_ranges: dict[tuple[int, int], str] = {}
+        self.preferences: dict[str, AccountPreferences] = {}
 
     def register(self, request: RegistrationRequest) -> Account:
         if request.email.lower() in {account.email.lower() for account in self.accounts}:
@@ -141,7 +209,17 @@ class AccountAccessManager(AccountManager):
             timezone=request.timezone,
         )
         self.accounts.append(registered)
+        preferences_slug = request.email.lower().replace("_", "-")
+        self.preferences[preferences_slug] = AccountPreferences(
+            request.email.lower().replace("_", "-"),
+            registered.email,
+            registered_at=datetime.now(UTC),
+        )
         return registered
+
+    def set_preferences(self, preferences: AccountPreferences) -> AccountPreferences:
+        self.preferences[preferences.slug] = preferences
+        return preferences
 
     def assign_api_key(self, account: Account, api_key: str, range_start: int = 0, range_end: int = 0) -> str:
         if not api_key:
