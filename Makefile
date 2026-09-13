@@ -1,5 +1,8 @@
 PYTEST_FLAGS := -q
 
+export
+PYTHONPATH := src
+
 .PHONY: run test
 
 run:

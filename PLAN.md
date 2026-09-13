@@ -24,7 +24,8 @@ Introduce a replaceable repository interface and an in-memory implementation.
 
 Acceptance:
 
-- Read/write/delete operations are covered.
+- Read operations and storage extension registration are covered.
+- Storage can be swapped without business-service changes.
 - Storage can be swapped without business-service changes.
 
 ## Phase 04 — Service Layer
