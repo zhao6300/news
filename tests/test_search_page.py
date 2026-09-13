@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from auth import Account, Address, Registration, demo_account_manager
+from auth import AuthenticatedAccount
 from extensions.builtin import builtin_collections
 from app import (
     render_article_items,
@@ -18,6 +19,7 @@ from storage import Page
 from scaffold import Article, CategoryGroup
 from datetime import UTC, datetime
 from app import PortalHandler
+from app import render_account_page
 from searchers import InMemorySearchEngine
 from services import InMemoryPlatformService
 from sessions import SessionManager
@@ -178,6 +180,12 @@ def test_search_results_keep_source_filter_in_pagination():
     html = render_search_results("example", result, None, "AI Digest")
 
     assert "source=AI+Digest" in html
+
+
+def test_account_page_shows_current_owner():
+    html = render_account_page(AuthenticatedAccount(1, "member@example.com"))
+
+    assert "Signed in as member@example.com" in html
 
 
 def _article(article_id: int, category: CategoryGroup = CategoryGroup.TECH) -> Article:

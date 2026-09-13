@@ -411,6 +411,18 @@ def render_html_page(
 </html>"""
 
 
+def render_account_page(account: AuthenticatedAccount) -> str:
+    body = f"""
+<h1>Account</h1>
+<p>账户使用与平台访问说明</p>
+<div class='article-card'>
+    <strong>Signed in as {escape(account.email)}</strong>
+    <p>已经登录</p>
+</div>
+"""
+    return render_html_page("Account", body)
+
+
 def render_search_page(title: str, body: str) -> str:
     return render_html_page(title, body)
 
@@ -460,10 +472,22 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.handle_search_api()
         elif path == "/search":
             self.handle_search_page()
+        elif path == "/account":
+            self.show_account_page()
         elif path == "/login":
             self.show_login_page()
         else:
             self.show_not_found()
+
+    def show_account_page(self) -> None:
+        account = self.current_account()
+        if account is None:
+            self.show_not_found()
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(render_account_page(account).encode("utf-8"))
 
     def do_POST(self) -> None:
         if urlparse(self.path).path == "/login":
