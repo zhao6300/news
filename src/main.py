@@ -35,6 +35,9 @@ def configured_rss_connectors(config_json: str | None) -> list[RssItemConnector]
         source = str(record.get("source", ""))
         category_value = str(record.get("category", ""))
         url = str(record.get("url", ""))
+        limit = record.get("limit")
+        if limit is not None and (not isinstance(limit, int) or limit < 1):
+            raise ValueError("Configured RSS limit must be a positive integer.")
         if not slug or not source or not url or not category_value:
             raise ValueError("Configured RSS feeds require slug, source, category, and url.")
         connectors.append(
@@ -44,6 +47,7 @@ def configured_rss_connectors(config_json: str | None) -> list[RssItemConnector]
                 CategoryGroup(category_value),
                 feed_url=url,
                 fetcher=read_feed,
+                limit=limit,
             )
         )
     return connectors

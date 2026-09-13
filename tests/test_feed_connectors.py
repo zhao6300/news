@@ -23,6 +23,7 @@ def test_configured_feed_ingests_and_builds_extension(monkeypatch, tmp_path):
                     "source": "Research",
                     "category": "models",
                     "url": "https://example.com/feed",
+                    "limit": 1,
                 }
             ]
         ),

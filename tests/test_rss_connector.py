@@ -56,3 +56,17 @@ def test_rss_items_use_injected_feed_reader():
 
     assert connector.source_job.slug == "research-rss"
     assert [article.url for article in articles] == ["https://example.com/research"]
+
+
+def test_rss_limit_stops_after_first_requested_item():
+    connector = RssItemConnector(
+        "research-rss",
+        "Research",
+        CategoryGroup.MODELS,
+        feed_xml=RSS_XML,
+        limit=1,
+    )
+
+    articles = connector.fetch()
+
+    assert [article.title for article in articles] == ["New Model Research"]

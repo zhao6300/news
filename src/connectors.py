@@ -141,6 +141,7 @@ class RssItemConnector:
         feed_url: str | None = None,
         feed_xml: str | None = None,
         fetcher: Callable[[str], str] | None = None,
+        limit: int | None = None,
     ) -> None:
         self.slug = slug
         self.source = source
@@ -148,6 +149,7 @@ class RssItemConnector:
         self.feed_url = feed_url
         self.feed_xml = feed_xml
         self.fetcher = fetcher
+        self.limit = limit
 
     @property
     def source_job(self) -> SourceJob[Article]:
@@ -160,10 +162,10 @@ class RssItemConnector:
             root = ElementTree.fromstring(self.fetcher(self.feed_url))
         else:
             root = ElementTree.fromstring(self.feed_xml)
-        return [
-            self._article_from_item(item)
-            for item in root.iter("item")
-        ]
+        items = root.iter("item")
+        if self.limit is not None:
+            items = list(items)[: self.limit]
+        return [self._article_from_item(item) for item in items]
 
     def _article_from_item(self, item: ElementTree.Element) -> Article:
         title = self._item_text(item, "title")
