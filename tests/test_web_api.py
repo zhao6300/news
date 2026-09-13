@@ -1,4 +1,5 @@
 from __future__ import annotations
+from urllib.parse import urlparse
 
 import threading
 from datetime import UTC, datetime
@@ -19,6 +20,8 @@ from app import (
     render_top_bar,
 )
 from auth import AccountManager, demo_account_manager, install_logged_in_cookie
+from auth import demo_account_manager as create_demo_account_manager
+from app import AccountSettingsHandler
 from connectors import IngestionReport
 from sessions import SessionManager
 from searchers import InMemorySearchEngine
@@ -49,6 +52,18 @@ def test_extension_sections_are_rendered_through_service():
 
 
 def test_health_endpoint_is_api_reachable():
+    service = InMemoryPlatformService(builtin_collections())
+    account_manager = AccountManager(())
+    session_manager = SessionManager()
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, InMemorySearchEngine([]), *args, **kwargs),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+
+def test_source_tag_revalidation_accepts_signed_paths():
     service = InMemoryPlatformService(builtin_collections())
     account_manager = AccountManager(())
     session_manager = SessionManager()

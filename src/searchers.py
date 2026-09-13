@@ -25,6 +25,7 @@ class InMemorySearchEngine(SearchEngine):
 
     def search(self, query, category=None, source=None, page=1, page_size=10) -> Page:
         normalized = query.lower()
+        words = [word for word in normalized.replace("　", " ").split(" ") if word]
         if not normalized:
             return Page([], page, page_size, 0)
         matches = [
@@ -32,9 +33,14 @@ class InMemorySearchEngine(SearchEngine):
             for article in self.articles
             if (category is None or article.category_id == category)
             and (source is None or article.source == source)
-            and any(
-                normalized in text.lower()
-                for text in (article.title, article.summary, article.source, " ".join(article.tags))
+            and (
+                normalized in article.title.lower()
+                or normalized in article.summary.lower()
+                or all(
+                    word in text.lower()
+                    for text in (article.source, " ".join(article.tags))
+                    for word in words
+                )
             )
         ]
         offset = (page - 1) * page_size

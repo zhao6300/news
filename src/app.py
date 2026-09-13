@@ -136,6 +136,7 @@ class AccountSettingsHandler:
         if not verification_key:
             raise ValueError("A verification key is required for account access.")
         self._verification_key = verification_key
+        self.revalidate = ["domain", "search"]
 
     def handle_account_subject(self, request: AccountSubjectRequest) -> str:
         if request.profile_key != self._verification_key:
@@ -210,6 +211,7 @@ def render_top_bar(authenticated_account: AuthenticatedAccount | None) -> str:
     return f"""
     <div class='current-account-bar signed-in'>
         <span>Signed in as {escape(authenticated_account.email)}</span>
+        <a href='/account' class='account-menu'>Account</a>
         <a href='/logout'>Log Out</a>
     </div>
     """
