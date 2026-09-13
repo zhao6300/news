@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Generic, Protocol, TypeVar
 
 from models import TextEntry
+from scaffold import Article, PlatformExtension
 
 
 TItem = TypeVar("TItem")
@@ -57,11 +58,21 @@ class ConnectorRegistry:
     def get(self, slug: str) -> BuiltinArticleConnector:
         return self.connectors[slug]
 
+    def register_extension(self, extension: PlatformExtension) -> BuiltinArticleConnector:
+        return self.register(
+            BuiltinArticleConnector(extension.slug, extension.label, extension.entries)
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class BuiltinArticleConnector:
     slug: str
     label: str
+    entries: Sequence[Article]
+
+    @property
+    def source_job(self) -> SourceJob[Article]:
+        return SourceJob(self.slug, self.label, Connector(list(self.entries)))
 
 
 class SourceScheduler(Generic[TItem]):

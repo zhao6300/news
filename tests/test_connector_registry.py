@@ -15,10 +15,22 @@ from scaffold import CategoryGroup
 
 
 def test_connector_registry_register_and_get():
-    connector = BuiltinArticleConnector("connector", "Technology")
+    connector = BuiltinArticleConnector("connector", "Technology", ())
     registry = ConnectorRegistry()
     assert registry.register(connector) is connector
     assert registry.get("connector") is connector
+
+
+def test_connector_registry_turns_extension_into_article_job():
+    registry = ConnectorRegistry()
+    extension = builtin_collections()[0]
+
+    registered = registry.register_extension(extension)
+
+    assert registered is registry.get("builtin")
+    assert len(registered.entries) == 6
+    assert registered.source_job.slug == "builtin"
+    assert SourceScheduler((registered.source_job,)).run()[0].item_count == 6
 
 
 def test_connector_repository_with_missing_connector():
