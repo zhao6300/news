@@ -4,7 +4,7 @@ from typing import Sequence
 from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import AccountManager, configured_account
-from connectors import Connector, SourceJob, SourceScheduler
+from connectors import ArticleIngestionScheduler, ConnectorRegistry
 from sessions import SessionManager
 from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
@@ -14,11 +14,10 @@ from sqlite_store import SQLiteArticleLayer
 from http.server import ThreadingHTTPServer
 
 
-def run_ingestion_reports(extensions: Sequence) -> list:
-    scheduler = SourceScheduler(
-        SourceJob(extension.slug, extension.label, Connector(extension.entries))
-        for extension in extensions
-    )
+def run_ingestion_reports(extensions: Sequence, repository: object) -> list:
+    registry = ConnectorRegistry()
+    jobs = [registry.register_extension(extension).source_job for extension in extensions]
+    scheduler = ArticleIngestionScheduler(jobs, repository)
     return scheduler.run()
 
 
@@ -29,9 +28,7 @@ def platform_components(database_path: str | None = None) -> tuple[Sequence, Rep
 
     repository = SQLiteArticleLayer(database_path) if database_path else InMemoryRepositoryLayer()
     if repository.total == 0:
-        for extension in extensions:
-            for article in extension.entries:
-                repository.add(article)
+        run_ingestion_reports(extensions, repository)
         if isinstance(repository, InMemoryRepositoryLayer):
             repository.next_id = max(repository.articles, default=0) + 1
     else:
@@ -44,7 +41,7 @@ def platform_components(database_path: str | None = None) -> tuple[Sequence, Rep
 
 
 def main() -> None:
-    extensions, _, search_engine, service = platform_components(os.getenv("PLATFORM_DB"))
+    extensions, repository, search_engine, service = platform_components(os.getenv("PLATFORM_DB"))
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
 
@@ -54,7 +51,7 @@ def main() -> None:
             AccountManager((configured_account(),)),
             SessionManager(),
             search_engine,
-            ingestion_reports=run_ingestion_reports(extensions),
+            ingestion_reports=run_ingestion_reports(extensions, repository),
             *args,
             **kwargs,
         )

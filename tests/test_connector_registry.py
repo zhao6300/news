@@ -11,6 +11,7 @@ from connectors import (
     SourceScheduler,
 )
 from extensions.builtin import builtin_collections
+from main import run_ingestion_reports
 from services import InMemoryPlatformService, PlatformServiceInterface
 from storage import InMemoryRepositoryLayer
 from scaffold import Article, CategoryGroup
@@ -33,6 +34,15 @@ def test_connector_registry_turns_extension_into_article_job():
     assert len(registered.entries) == 6
     assert registered.source_job.slug == "builtin"
     assert SourceScheduler((registered.source_job,)).run()[0].item_count == 6
+
+
+def test_ingestion_scheduler_reports_repository_jobs_without_duplicates():
+    repository = InMemoryRepositoryLayer()
+    reports = run_ingestion_reports(builtin_collections(), repository)
+
+    assert [report.succeeded for report in reports] == [True]
+    assert [report.item_count for report in reports] == [6]
+    assert repository.total == 6
 
 
 def test_connector_repository_with_missing_connector():
