@@ -16,6 +16,7 @@ Add stable data models and settings loading for the information categories.
 Acceptance:
 
 - Categories and records are validated.
+- An in-memory repository layer is covered and can later be replaced without business-service changes.
 - Settings snapshots change without changing callers.
 
 ## Phase 03 — Storage Layer
