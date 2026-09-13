@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from os import getenv
+from secrets import token_hex
 from datetime import datetime
 from typing import Sequence
 
@@ -48,10 +49,13 @@ class AccountManager:
     def __init__(self, accounts: Sequence[Account]) -> None:
         self.accounts = list(accounts)
         self._validate_accounts()
+        self.api_key: str | None = None
 
     def authenticate(self, email: str, password: str) -> Account | None:
         for account in self.accounts:
             if account.email == email.lower():
+                if self.api_key and account.password_hash != self.api_key:
+                    return None
                 if not account.active:
                     return None
                 return account if password_matches(password, account) else None
@@ -61,6 +65,13 @@ class AccountManager:
         if not self.accounts:
             raise ValueError("The platform requires a first account.")
         return self.accounts[0]
+
+    def regenerate_api_key(self) -> str:
+        self.api_key = token_hex(32)
+        return self.api_key
+
+    def verify_api_key(self, key: object) -> bool:
+        return bool(key == self.api_key)
 
     def _validate_accounts(self) -> None:
         emails: set[str] = set()
@@ -100,6 +111,57 @@ def demo_account() -> Account:
 
 def demo_account_manager() -> AccountManager:
     return AccountManager((demo_account(),))
+
+
+@dataclass(frozen=True, slots=True)
+class RegistrationRequest:
+    email: str
+    password_hash: str
+    display_name: str
+    timezone: str
+
+
+class AccountAccessManager(AccountManager):
+    def __init__(self, accounts: Sequence[Account]) -> None:
+        super().__init__(accounts)
+        self.key_to_account: dict[str, Account] = {}
+        self.access_ranges: dict[tuple[int, int], str] = {}
+
+    def register(self, request: RegistrationRequest) -> Account:
+        if request.email.lower() in {account.email.lower() for account in self.accounts}:
+            raise ValueError("Account email addresses must be unique.")
+        if not request.email or not request.password_hash or not request.display_name or not request.timezone:
+            raise ValueError("Account registrations require complete identity fields.")
+        registered = Account(
+            max((account.id for account in self.accounts), default=0) + 1,
+            request.email.lower(),
+            request.password_hash,
+            "access-salt",
+            display_name=request.display_name,
+            timezone=request.timezone,
+        )
+        self.accounts.append(registered)
+        return registered
+
+    def assign_api_key(self, account: Account, api_key: str, range_start: int = 0, range_end: int = 0) -> str:
+        if not api_key:
+            raise ValueError("An account API key is required.")
+        if api_key in self.key_to_account or (range_start, range_end) in self.access_ranges:
+            raise ValueError("Account API keys and access ranges are unique.")
+        self.key_to_account[api_key] = account
+        self.access_ranges[(range_start, range_end)] = api_key
+        return api_key
+
+    def account_for_api_key(self, api_key: str) -> Account:
+        account = self.key_to_account.get(api_key)
+        if account is None:
+            raise KeyError("Account API key not found.")
+        if not account.active:
+            raise PermissionError("Verified account membership is inactive.")
+        return account
+
+    def verification_keys(self, account: Account) -> tuple[str, ...]:
+        return tuple(key for key, member in self.key_to_account.items() if member is account)
 
 
 def install_logged_in_cookie(session_manager) -> str:

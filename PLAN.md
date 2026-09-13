@@ -102,15 +102,16 @@ Acceptance:
 - Authentication confirms the account remains active.
 - Unit and integration suites cover profile defaults, duplicate prevention, and inactive login rejection.
 
-## Phase 11 — Account Service and Owner API
+## Phase 11 — Account Access Management Service
 
-Scope: add owner-scoped management methods and `/account`, `/api/account`, `/api/accounts` operations.
+Scope: add an internal owner-scoped access-management service that can register regenerate and verify account API keys without exposing a second UI namespace.
 
 Acceptance:
 
-- Authentication remains constant-time and updates last-seen state for valid credentials.
-- Owner API supports create, activate, deactivate, update, and delete operations.
-- Each operation is tested for active membership, ownership, and HTTP handling.
+- Registration requires complete identity fields and rejects duplicate email addresses.
+- Regenerated verification keys replace the prior key as a range-scoped value.
+- Verification keys remain inactive when no owner member sends the request.
+- API responses return JSON descriptions and do not expose source code or wellness test logic.
 
 ## Phase 12 — Account Browser Interface
 
