@@ -109,16 +109,6 @@ def render_navigation(counts_by_category: dict[CategoryGroup, int] | None = None
     return f"<div class='category-nav'>{''.join(links)}</div>"
 
 
-def render_current_user(account: AuthenticatedAccount | None) -> str:
-    if account is None:
-        return ""
-    return f"""
-    <div class='user-menu'>
-        <a href='/logout'>Log out ({escape(account.email)})</a>
-    </div>
-    """
-
-
 def render_top_bar(authenticated_account: AuthenticatedAccount | None) -> str:
     if authenticated_account is None:
         return """
@@ -231,7 +221,6 @@ def render_html_page(
         <a class='site-title' href='/'>News Intelligence</a>
         {render_search_form()}
         {render_navigation(counts_by_category)}
-        {render_current_user(authenticated_account)}
         {render_top_bar(authenticated_account)}
     </div>
 </header>

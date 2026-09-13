@@ -167,7 +167,7 @@ def test_home_page_is_served_by_runtime_handler():
         thread.join()
 
 
-def test_home_page_renders_logout_for_authenticated_cookie():
+def test_home_page_renders_authenticated_top_bar():
     session_manager = SessionManager()
     cookie = install_logged_in_cookie(session_manager)
     service = InMemoryPlatformService(builtin_collections())
@@ -199,7 +199,8 @@ def test_home_page_renders_logout_for_authenticated_cookie():
         server.server_close()
         thread.join()
 
-    assert "<a href='/logout'>Log out (member@example.com)</a>" in payload
+    assert "<a href='/logout'>Log Out</a>" in payload
+    assert "Sign in as member@example.com" in payload
 
 
 def test_login_submission_reports_valid_credentials():
