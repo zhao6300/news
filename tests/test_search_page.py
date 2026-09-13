@@ -86,7 +86,7 @@ def test_article_items_render_collected_tags():
     assert "<span class='tag'>technology</span>" in html
 
 
-def test_authenticated_search_page_accepts_category_filter():
+def test_search_route_serves_application_shell():
     service = InMemoryPlatformService(builtin_collections())
     session_manager = SessionManager()
     cookie = (
@@ -123,7 +123,9 @@ def test_authenticated_search_page_accepts_category_filter():
                 headers={"Cookie": cookie},
             )
         ) as response:
-            assert "aria-current='page'" in response.read().decode("utf-8")
+            payload = response.read().decode("utf-8")
+            assert 'id="view"' in payload
+            assert "aria-current='page'" not in payload
     finally:
         server.shutdown()
         server.server_close()

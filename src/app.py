@@ -3,10 +3,12 @@ from __future__ import annotations
 from html import escape
 from collections.abc import Sequence
 from json import dumps
+from json import loads
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
 import hashlib
+from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from auth import (
@@ -436,6 +438,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         session_manager: SessionManager,
         search_engine: SearchEngine,
         *args: object,
+        public_root: Path | None = None,
         ingestion_reports: Sequence[IngestionReport] = (),
         **kwargs: object,
     ) -> None:
@@ -444,12 +447,19 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.session_manager = session_manager
         self.search_engine = search_engine
         self.ingestion_reports = list(ingestion_reports)
+        self.public_root = public_root if public_root is not None else Path(__file__).resolve().parent.parent / "frontend"
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/logout":
             self.handle_logout()
+            return
+        if path == "/api/bootstrap":
+            self.handle_bootstrap_api()
+            return
+        if self.is_public_resource(path):
+            self.handle_public_resource(path)
             return
         if not self.is_authenticated(path):
             self.show_login_page()
@@ -471,6 +481,12 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.handle_ingestion_api()
         elif path == "/api/sources":
             self.handle_sources_api()
+        elif path == "/api/articles":
+            self.handle_articles_api()
+        elif path.startswith("/api/articles/"):
+            self.handle_article_api(path.removeprefix("/api/articles/"))
+        elif path.startswith("/api/extensions/"):
+            self.handle_extension_api(path.removeprefix("/api/extensions/"))
         elif path == "/api/search":
             self.handle_search_api()
         elif path == "/search":
@@ -493,8 +509,13 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.wfile.write(render_account_page(account).encode("utf-8"))
 
     def do_POST(self) -> None:
-        if urlparse(self.path).path == "/login":
+        path = urlparse(self.path).path
+        if path == "/login":
             self.handle_login()
+        elif path == "/api/login":
+            self.handle_login()
+        elif path == "/api/logout":
+            self.handle_logout()
         else:
             self.show_not_found()
 
@@ -527,7 +548,12 @@ class PortalHandler(BaseHTTPRequestHandler):
         return page, page_size
 
     def is_authenticated(self, path: str) -> bool:
-        return path in {"/login", "/health", "/api/ingestion"} or self.current_session() is not None
+        return (
+            path == "/login"
+            or path in {"/health", "/api/ingestion", "/api/articles", "/api/extensions"}
+            or path.startswith(("/api/articles/", "/api/extensions/"))
+            or self.current_session() is not None
+        )
 
     def current_session(self):
         return self.session_manager.resolve(self.session_token())
@@ -537,6 +563,60 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.account_manager,
             self.current_session(),
         )
+
+    def is_public_resource(self, path: str) -> bool:
+        return (
+            path == "/"
+            or path == "/home"
+            or path == "/login"
+            or path == "/account"
+            or path.startswith("/account/")
+            or path == "/sources"
+            or path == "/search"
+            or path.startswith("/category/")
+            or path.startswith("/article/")
+            or path.startswith("/extensions/")
+            or path.startswith("/static/")
+        )
+
+    def is_application_route(self, path: str) -> bool:
+        return (
+            path == "/"
+            or path in {"/home", "/login", "/account", "/sources", "/search"}
+            or path.startswith(("/category/", "/article/", "/extensions/", "/account/"))
+        )
+
+    def resolve_public_file(self, path: str) -> Path:
+        relative_path = "index.html" if self.is_application_route(path) else path.lstrip("/")
+        public_file = (self.public_root / relative_path).resolve()
+        if public_file != self.public_root.resolve() and self.public_root.resolve() not in public_file.parents:
+            raise KeyError(path)
+        return public_file
+
+    def handle_public_resource(self, path: str) -> None:
+        if path == "/login" and self.current_account() is not None:
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.end_headers()
+            return
+        try:
+            public_file = self.resolve_public_file(path)
+            content = public_file.read_bytes()
+        except (KeyError, OSError):
+            self.show_not_found()
+            return
+        content_type = {
+            ".html": "text/html; charset=utf-8",
+            ".css": "text/css; charset=utf-8",
+            ".js": "text/javascript; charset=utf-8",
+        }.get(public_file.suffix.lower())
+        if content_type is None:
+            self.show_not_found()
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.end_headers()
+        self.wfile.write(content)
 
     def show_home_page(self) -> None:
         sections = "".join(render_extension_section(extension) for extension in self.service.extensions)
@@ -619,6 +699,12 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html_content.encode("utf-8"))
 
+    def send_json_response(self, payload: dict[str, object], *, status: int = 200) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(dumps(payload, ensure_ascii=False).encode("utf-8"))
+
     def show_login_page(self, message: str | None = None, status: int = 200) -> None:
         html_content = render_html_page("登录", render_login_form(message))
         self.send_response(status)
@@ -636,39 +722,41 @@ class PortalHandler(BaseHTTPRequestHandler):
 
     def handle_login(self) -> None:
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
-        submitted = parse_qs(body.decode("utf-8"))
+        payload = loads(body.decode("utf-8")) if body else {}
+        if not isinstance(payload, dict):
+            self.send_json_response({"message": "登录数据必须是 JSON 对象。"}, status=400)
+            return
         request = LoginRequest(
-            email=submitted.get("email", [""])[0],
-            password=submitted.get("password", [""])[0],
+            email=str(payload.get("email", "")),
+            password=str(payload.get("password", "")),
         )
         account = authenticate_session(self.account_manager, request)
         if account is None:
-            self.show_login_page("登录失败，请检查邮箱和密码。", status=401)
+            self.send_json_response(
+                {"message": "登录失败，请检查邮箱和密码。", "status": "failed"},
+                status=401,
+            )
             return
         session = self.session_manager.create(account)
-        html_content = render_html_page(
-            "Signed In",
-            "<h1>Welcome back</h1><p>You are signed in to the platform.</p>",
-        )
-        self.send_response(303)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header(
             "Set-Cookie",
             f"portal_session={session.token}; Path=/; HttpOnly; SameSite=Lax",
         )
-        self.send_header("Location", "/")
         self.end_headers()
-        self.wfile.write(html_content.encode("utf-8"))
+        self.wfile.write(dumps({"status": "ok"}, ensure_ascii=False).encode("utf-8"))
 
     def handle_logout(self) -> None:
         self.session_manager.revoke(self.session_token())
-        self.send_response(303)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header(
             "Set-Cookie",
             "portal_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
         )
-        self.send_header("Location", "/login")
         self.end_headers()
+        self.wfile.write(b'{"status": "ok"}')
 
     def handle_search_api(self) -> None:
         query = parse_qs(urlparse(self.path).query)
@@ -725,6 +813,88 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.end_headers()
         self.wfile.write(dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    def handle_bootstrap_api(self) -> None:
+        account = self.current_account()
+        if self.service.repository is None:
+            counts = {category: 0 for category in CategoryGroup}
+        else:
+            counts = self.service.counts_by_category()
+        payload = {
+            "service": "News Intelligence Platform",
+            "account": {"email": account.email} if account else None,
+            "categories": [
+                {
+                    "slug": category.value,
+                    "label": category_label(category),
+                    "article_count": counts.get(category, 0),
+                }
+                for category in CategoryGroup
+            ],
+            "sources": [
+                {
+                    "slug": extension.slug,
+                    "label": extension.label,
+                    "url": f"/extensions/{extension.slug}",
+                    "article_count": len(extension.entries),
+                }
+                for extension in self.service.get_extensions()
+            ],
+        }
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    def handle_articles_api(self) -> None:
+        query = parse_qs(urlparse(self.path).query)
+        try:
+            text = query.get("category", [""])[0]
+            category = self.service.get_category(text) if text else None
+            page = max(1, int(query.get("page", ["1"])[0]))
+            page_size = max(1, min(50, int(query.get("page_size", ["12"])[0])))
+        except (KeyError, TypeError, ValueError):
+            self.show_not_found()
+            return
+        if category is None:
+            articles = [article for extension in self.service.get_extensions() for article in extension.entries]
+            result = Page(articles, page, page_size, len(articles))
+        else:
+            result = self.service.list_articles(category, page=page, page_size=page_size)
+        total_pages = max(1, (result.total + result.page_size - 1) // result.page_size)
+        payload = {
+            "items": [article_search_payload(article) for article in result.items],
+            "page": result.page,
+            "page_size": result.page_size,
+            "total": result.total,
+            "total_pages": total_pages,
+        }
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    def handle_extension_api(self, slug: str) -> None:
+        try:
+            extension = self.service.get_extension(slug)
+        except KeyError:
+            self.show_not_found()
+            return
+        payload = {
+            "slug": extension.slug,
+            "label": extension.label,
+            "article_count": len(extension.entries),
+            "items": [article_search_payload(article) for article in extension.entries],
+        }
+        self.send_json_response(payload)
+
+    def handle_article_api(self, article_id_text: str) -> None:
+        try:
+            article = self.service.get_article(int(article_id_text))
+        except (KeyError, ValueError):
+            self.show_not_found()
+            return
+        self.send_json_response(article_search_payload(article))
 
     def handle_sources_api(self) -> None:
         statuses = {report.slug: report for report in self.ingestion_reports}

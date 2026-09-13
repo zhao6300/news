@@ -1,6 +1,7 @@
 import os
 from functools import partial
 from json import loads
+from pathlib import Path
 from typing import Sequence
 
 from extensions.builtin import builtin_collections
@@ -122,6 +123,7 @@ def main() -> None:
     feed_connectors = configured_rss_connectors(os.getenv("PLATFORM_FEEDS"))
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
+    public_root = Path(__file__).resolve().parent.parent / "frontend"
 
     def handler(*args: object, **kwargs: object):
         return PortalHandler(
@@ -129,6 +131,7 @@ def main() -> None:
             AccountManager((configured_account(),)),
             SessionManager(),
             search_engine,
+            public_root,
             ingestion_reports=ingestion_reports,
             *args,
             **kwargs,

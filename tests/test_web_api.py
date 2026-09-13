@@ -5,7 +5,7 @@ import threading
 import pytest
 from http.client import HTTPConnection
 from datetime import UTC, datetime
-from json import loads
+from json import dumps, loads
 from urllib.parse import urlencode
 from urllib.error import HTTPError
 from http.server import ThreadingHTTPServer
@@ -181,7 +181,7 @@ def test_home_page_is_served_by_runtime_handler():
     try:
         with urlopen(f"http://127.0.0.1:{server.server_port}/") as response:
             assert response.status == 200
-            assert "Sign In" in response.read().decode("utf-8")
+            assert 'id="view"' in response.read().decode("utf-8")
     finally:
         server.shutdown()
         server.server_close()
@@ -203,7 +203,7 @@ def test_login_failure_keeps_chinese_error():
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    data = urlencode({"email": "member@example.com", "password": "wrong-password"}).encode("utf-8")
+    data = dumps({"email": "member@example.com", "password": "wrong-password"}).encode("utf-8")
     try:
         try:
             urlopen(Request(f"http://127.0.0.1:{server.server_port}/login", data=data, method="POST"))
@@ -362,11 +362,12 @@ def test_login_submission_reports_valid_credentials():
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    data = urlencode({"email": "member@example.com", "password": "demo-password"}).encode("utf-8")
+    data = dumps({"email": "member@example.com", "password": "demo-password"}).encode("utf-8")
     try:
         with urlopen(Request(f"http://127.0.0.1:{server.server_port}/login", data=data, method="POST")) as response:
             assert response.status == 200
-            assert "News Intelligence Platform" in response.read().decode("utf-8")
+            payload = loads(response.read().decode("utf-8"))
+            assert payload["status"] == "ok"
     finally:
         server.shutdown()
         server.server_close()

@@ -2,9 +2,21 @@
 
 面向新闻、技术、模型、评测等内容的轻量级信息收集平台。当前版本使用 Python 标准库完成 Web、服务层、存储层、RSS 连接器和诊断接口，避免平台核心依赖第三方包。
 
+## 架构
+
+平台使用前后端分离结构：
+
+- `frontend/index.html` 是唯一页面壳。
+- `frontend/static/app.js` 负责页面路由、中文界面和数据渲染。
+- `frontend/static/styles.css` 负责样式。
+- Python 后端通过 `/api/bootstrap`、`/api/articles`、`/api/extensions/{slug}`、`/api/search`、`/api/login`、`/api/logout` 提供数据。
+- 后端仍然是 Python 标准库，前端仍然是浏览器原生 `fetch`，没有 React/Vue/Vite/Node/npm 依赖。
+- 平台登录门禁在浏览器侧显示，受保护的分类、文章、搜索和来源数据仍然通过服务层与仓储层获取。
+
 ## 项目结构
 
 - `src/app.py` — Web 路由、页面渲染和登录会话处理。
+- `frontend/` — 浏览器壳、静态资源和页面路由逻辑。
 - `src/auth.py` — 账号模型、密码校验和账号访问控制。
 - `src/services.py` — 分类、来源、文章查询和分页服务。
 - `src/storage.py` — 可替换仓储接口与内存实现。
@@ -145,6 +157,13 @@ RSS 连接器会根据文章 URL 生成稳定 ID。来源不可访问、格式�
 ```
 
 ## 页面和接口
+
+- `GET /`：前端应用壳。
+- `GET /static/{styles.css|app.js}`：前端静态资源。
+- `GET /api/bootstrap`：全局分类、来源、登录状态。
+- `GET /api/articles`：内容和分页。
+- `GET /api/articles/{id}`：文章详情。
+- `GET /api/extensions/{slug}`：指定来源内容。
 
 - `GET /`：首页和全部来源聚合。
 - `GET /extensions/{slug}`：指定来源的文章列表。

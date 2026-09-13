@@ -200,3 +200,17 @@ Acceptance:
 - An authenticated visitor opening `/login` is redirected to `/` without replacing the existing session.
 - `/api/sources` reports each service connector, article count, category counts, and ingestion diagnostics.
 - No new dependency is introduced; RSS remains configured through `PLATFORM_FEEDS`.
+
+## Phase 21 — Frontend and Backend Separation
+
+Scope: split the browser experience into static HTML/CSS/JavaScript in `frontend/`, move pages onto the
+existing service-backed JSON API, and keep the Python process only as an API/static-file provider.
+
+Acceptance:
+
+- `/` and all main routes serve `frontend/index.html` and load `/static/app.js` and `/static/styles.css`.
+- Login, categories, articles, search, and source diagnostics are accessible as JSON APIs.
+- Signed and unsigned `/account` paths serve the application shell without creating a second account namespace.
+- Static loader blocks paths outside `frontend/`.
+- The same category, article, search, and source data remain protected by CLI-backed service methods.
+- There is no npm/Node/Vite/React build dependency; the front end uses standard browser platform APIs.
