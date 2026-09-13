@@ -375,9 +375,10 @@ def render_html_page(
         h1 {{ font-size: 1.7rem; line-height: 1.2; margin: .2rem 0 .3rem; }}
         h2 {{ margin: 1.5rem 0 .8rem; }}
         .page-meta {{ color: var(--muted); font-size: .95rem; margin: 0; }}
-        .category-nav {{ display: grid; gap: .65rem; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); margin-top: 1.2rem; }}
-        .category-nav a {{ background: rgba(255,255,255,.12); border-radius: 99rem; color: #fff; font-size: .92rem; padding: .35rem .8rem; text-align: center; }}
-        .category-nav a span {{ margin-left: .25rem; opacity: .7; }}
+        .category-nav {{ display: flex; align-items: stretch; gap: .55rem; flex-wrap: wrap; margin-top: 1.2rem; }}
+        .category-nav a {{ display: inline-flex; align-items: center; min-width: 6.4rem; background: rgb(255 255 255 / 8%); border: 1px solid rgb(255 255 255 / 12%); border-radius: 1.15rem; padding: .72rem 1rem .72rem 1.1rem; color: #fff; font-size: .98rem; font-weight: 650; letter-spacing: -.02em; }}
+        .category-nav a:hover {{ background: rgb(255 255 255 / 13%); }}
+        .category-nav a span {{ margin-left: .45rem; font-size: .82em; opacity: .58; }}
         .filter-list {{ display: flex; flex-wrap: wrap; gap: .45rem; margin: 1rem 0; }}
         .filter-list a {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .5rem; color: #211f1e; font-size: .88rem; padding: .25rem .6rem; text-decoration: none; }}
         .tag-list {{ display: flex; flex-wrap: wrap; gap: .35rem; margin: .7rem 0; }}
