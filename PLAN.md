@@ -91,16 +91,16 @@ Acceptance:
 - The continuation sequence has concrete UI, API, persistence, service, testing, and operational scopes.
 - The rules require Chinese user-facing text, root-cause diagnosis, focused diff review, clean ending status, and one commit for each phase.
 
-## Phase 10 — Account Profile and Ownership
+## Phase 10 — Account Identity and Ownership
 
-Scope: extend the stable account model with display name, timezone, active status, and last-seen timestamp; upgrade storage and service access to require the first account.
+Scope: extend the stable account model with display name, timezone, active status, and last-seen timestamp; keep one platform owner available to privileged routes.
 
 Acceptance:
 
-- Account creation rejects duplicate email IDs and validates non-empty profile fields.
-- Persisted accounts keep profile properties and status through storage round trips.
-- Persistence initialization fails rather than accepting an empty account table.
-- Service account creation uses the real storage layer and authentication rejects inactive accounts.
+- Account creation rejects duplicate email addresses and validates non-empty identity fields.
+- Account manager requires the first owner account and returns it for authoritative use.
+- Authentication confirms the account remains active.
+- Unit and integration suites cover profile defaults, duplicate prevention, and inactive login rejection.
 
 ## Phase 11 — Account Service and Owner API
 
