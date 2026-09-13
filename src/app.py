@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from json import dumps
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from auth import AccountManager
 from services import InMemoryPlatformService
@@ -81,6 +81,28 @@ def render_search_form(query: str = "") -> str:
     """
 
 
+def render_search_filters(query: str, selected_category: CategoryGroup | None = None) -> str:
+    links = [
+        f"<a href='{escape(_search_url(query))}'"
+        + (f" aria-current='page'" if selected_category is None else "")
+        + ">All</a>"
+    ]
+    links.extend(
+        f"<a href='{escape(_search_url(query, category))}'"
+        + (f" aria-current='page'" if selected_category == category else "")
+        + f">{category_label(category)}</a>"
+        for category in CategoryGroup
+    )
+    return f"<div class='filter-list'>{''.join(links)}</div>"
+
+
+def _search_url(query: str, category: CategoryGroup | None = None) -> str:
+    parameters = {"q": query}
+    if category is not None:
+        parameters["category"] = category.value
+    return f"/search?{urlencode(parameters)}"
+
+
 def render_html_page(title: str, body: str) -> str:
     return f"""<!doctype html>
 <html lang='en'>
@@ -106,6 +128,8 @@ def render_html_page(title: str, body: str) -> str:
         .page-meta {{ color: var(--muted); font-size: .95rem; margin: 0; }}
         .category-nav {{ display: grid; gap: .65rem; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); margin-top: 1.2rem; }}
         .category-nav a {{ background: rgba(255,255,255,.12); border-radius: 99rem; color: #fff; font-size: .92rem; padding: .35rem .8rem; text-align: center; }}
+        .filter-list {{ display: flex; flex-wrap: wrap; gap: .45rem; margin: 1rem 0; }}
+        .filter-list a {{ background: var(--surface); border: 1px solid var(--edge); border-radius: 99rem; color: #211f1e; font-size: .86rem; padding: .3rem .7rem; text-decoration: none; }}
         .article-list {{ display: grid; gap: .9rem; margin-top: 1rem; }}
         .article-card {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .65rem; padding: 1rem 1.1rem; }}
         .article-card a {{ color: var(--accent); text-decoration: none; }}
@@ -139,7 +163,7 @@ def render_search_page(title: str, body: str) -> str:
     return render_html_page(title, body)
 
 
-def render_search_results(query: str, result: Page) -> str:
+def render_search_results(query: str, result: Page, selected_category: CategoryGroup | None = None) -> str:
     if not query:
         heading = "Search"
     elif result.total:
@@ -149,6 +173,7 @@ def render_search_results(query: str, result: Page) -> str:
     body = f"""
 <h1>{escape(heading)}</h1>
 <p>{result.total} matching page{'s' if result.total != 1 else ''}</p>
+{render_search_filters(query, selected_category)}
 <div class='article-list'>{render_article_items(result.items)}</div>
     """
     return render_html_page("Search", body)
@@ -210,6 +235,15 @@ class PortalHandler(BaseHTTPRequestHandler):
         cookie = SimpleCookie(self.headers.get("Cookie", ""))
         morsel = cookie.get("portal_session")
         return morsel.value if morsel else None
+
+    def search_category(self, query: dict[str, list[str]]) -> CategoryGroup | None:
+        text = query.get("category", [""])[0]
+        if not text:
+            return None
+        try:
+            return CategoryGroup(text)
+        except ValueError:
+            raise KeyError(text) from None
 
     def is_authenticated(self, path: str) -> bool:
         return path in {"/login", "/health"} or self.current_session() is not None
@@ -341,9 +375,19 @@ class PortalHandler(BaseHTTPRequestHandler):
     def handle_search_api(self) -> None:
         query = parse_qs(urlparse(self.path).query)
         text = query.get("q", [""])[0]
+        try:
+            category = self.search_category(query)
+        except KeyError:
+            self.show_not_found()
+            return
         page = max(1, int(query.get("page", ["1"])[0]))
         page_size = min(100, max(1, int(query.get("page_size", ["10"])[0])))
-        result = self.search_engine.search(text, page=page, page_size=page_size)
+        result = self.search_engine.search(
+            text,
+            category=category,
+            page=page,
+            page_size=page_size,
+        )
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.end_headers()
@@ -371,8 +415,18 @@ class PortalHandler(BaseHTTPRequestHandler):
     def handle_search_page(self) -> None:
         query = parse_qs(urlparse(self.path).query)
         text = query.get("q", [""])[0]
-        result = self.search_engine.search(text)
-        html_content = render_search_results(text, result)
+        try:
+            category = self.search_category(query)
+        except KeyError:
+            self.show_not_found()
+            return
+        page_size = min(50, max(1, int(query.get("page_size", ["10"])[0])))
+        result = self.search_engine.search(
+            text,
+            category=category,
+            page_size=page_size,
+        )
+        html_content = render_search_results(text, result, category)
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
