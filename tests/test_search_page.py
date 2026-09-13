@@ -8,6 +8,7 @@ from urllib.request import Request, urlopen
 from auth import Account, demo_account_manager
 from extensions.builtin import builtin_collections
 from app import render_article_items, render_search_results
+from app import render_search_pagination
 from storage import Page
 from scaffold import Article, CategoryGroup
 from datetime import UTC, datetime
@@ -32,6 +33,25 @@ def test_article_items_render_semantic_cards_with_source_and_category():
     assert "Article 1" in html
     assert "Example · Tech" in html
     assert "2026-01-01" in html
+
+
+def test_search_pagination_preserves_query_filters_and_bounds():
+    result = Page([], page=2, page_size=10, total=31)
+
+    pagination = render_search_pagination("models", result, CategoryGroup.MODELS)
+
+    assert "Page 2 of 4" in pagination
+    assert "/search?q=models&amp;category=models&amp;page=1&amp;page_size=10" in pagination
+    assert "/search?q=models&amp;category=models&amp;page=3&amp;page_size=10" in pagination
+    assert "/search?q=models&amp;category=models&amp;page=4&amp;page_size=10" in pagination
+
+
+def test_single_page_search_hides_pagination():
+    result = Page([], page=1, page_size=10, total=7)
+
+    html = render_search_results("models", result, CategoryGroup.MODELS)
+
+    assert "Page 1 of " not in html
 
 
 def test_authenticated_search_page_accepts_category_filter():
@@ -70,6 +90,49 @@ def test_authenticated_search_page_accepts_category_filter():
             )
         ) as response:
             assert "aria-current='page'" in response.read().decode("utf-8")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_authenticated_search_page_shows_page_two():
+    service = InMemoryPlatformService(builtin_collections())
+    session_manager = SessionManager()
+    cookie = (
+        "portal_session="
+        + session_manager.create(
+            Account(
+                1,
+                "member@example.com",
+                "hash",
+                "salt",
+            )
+        ).token
+    )
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            InMemorySearchEngine(builtin_collections()[0].entries),
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        query = urlencode({"q": "AI", "page_size": 1, "page": 2})
+        with urlopen(
+            Request(
+                f"http://127.0.0.1:{server.server_port}/search?{query}",
+                headers={"Cookie": cookie},
+            )
+        ) as response:
+            payload = response.read().decode("utf-8")
+        assert "AI Information Discovery" in payload
     finally:
         server.shutdown()
         server.server_close()

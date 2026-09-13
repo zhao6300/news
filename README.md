@@ -63,6 +63,7 @@ RSS sources can be enabled with `PLATFORM_FEEDS`. Each record requires `slug`, `
 - `/api/ingestion` — startup source diagnostics, including item counts and source errors.
 
 Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional `category` slug such as `models`.
+Search result pagination preserves the active `q`, `category`, and `page_size` filters.
 
 ## Known next steps
 

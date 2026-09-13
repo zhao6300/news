@@ -159,11 +159,60 @@ def render_search_filters(query: str, selected_category: CategoryGroup | None = 
     return f"<div class='filter-list'>{''.join(links)}</div>"
 
 
-def _search_url(query: str, category: CategoryGroup | None = None) -> str:
-    parameters = {"q": query}
+def _search_url(
+    query: str,
+    category: CategoryGroup | None = None,
+    page: int | None = None,
+    page_size: int | None = None,
+) -> str:
+    parameters = [("q", query)]
     if category is not None:
-        parameters["category"] = category.value
+        parameters.append(("category", category.value))
+    if page is not None:
+        parameters.append(("page", page))
+    if page_size is not None:
+        parameters.append(("page_size", page_size))
     return f"/search?{urlencode(parameters)}"
+
+
+def render_search_results(
+    query: str,
+    result: Page,
+    selected_category: CategoryGroup | None = None,
+) -> str:
+    if not query:
+        heading = "Search"
+    elif result.total:
+        heading = f"Search: {query}"
+    else:
+        heading = "No matching content"
+    body = f"""
+<h1>{escape(heading)}</h1>
+<p>{result.total} matching page{'s' if result.total != 1 else ''}</p>
+{render_search_filters(query, selected_category)}
+<div class='article-list'>{render_article_items(result.items)}</div>
+<nav class='pagination'>{render_search_pagination(query, result, selected_category)}</nav>
+    """
+    return render_html_page("Search", body)
+
+
+def render_search_pagination(
+    query: str,
+    result: Page,
+    selected_category: CategoryGroup | None = None,
+) -> str:
+    total_pages = max(1, (result.total + result.page_size - 1) // result.page_size)
+    if total_pages == 1:
+        return ""
+    previous_page = max(1, result.page - 1)
+    next_page = min(total_pages, result.page + 1)
+    links = [
+        f"<a href='{escape(_search_url(query, selected_category, 1, result.page_size))}'>First</a>",
+        f"<a href='{escape(_search_url(query, selected_category, previous_page, result.page_size))}'>Prev</a>",
+        f"<a href='{escape(_search_url(query, selected_category, next_page, result.page_size))}'>Next</a>",
+        f"<a href='{escape(_search_url(query, selected_category, total_pages, result.page_size))}'>Last</a>",
+    ]
+    return f"Page {result.page} of {total_pages} " + " ".join(links)
 
 
 def render_html_page(
@@ -525,10 +574,12 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.show_not_found()
             return
         page_size = min(50, max(1, int(query.get("page_size", ["10"])[0])))
+        page = max(1, int(query.get("page", ["1"])[0]))
         result = self.search_engine.search(
             text,
             category=category,
             page_size=page_size,
+            page=page,
         )
         html_content = render_search_results(text, result, category)
         self.send_response(200)
