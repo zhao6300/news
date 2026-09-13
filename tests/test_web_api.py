@@ -200,7 +200,7 @@ def test_home_page_renders_authenticated_top_bar():
         thread.join()
 
     assert "<a href='/logout'>Log Out</a>" in payload
-    assert "Sign in as member@example.com" in payload
+    assert "Signed in as member@example.com" in payload
 
 
 def test_login_submission_reports_valid_credentials():

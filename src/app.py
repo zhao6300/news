@@ -118,8 +118,18 @@ def render_top_bar(authenticated_account: AuthenticatedAccount | None) -> str:
     """
     return f"""
     <div class='current-account-bar signed-in'>
-        <span>Sign in as {escape(authenticated_account.email)}</span>
+        <span>Signed in as {escape(authenticated_account.email)}</span>
         <a href='/logout'>Log Out</a>
+    </div>
+    """
+
+
+def render_current_user(account: AuthenticatedAccount | None) -> str:
+    if account is None:
+        return ""
+    return f"""
+    <div class='user-menu'>
+        <a href='/top-bar'>{escape(account.email)}</a>
     </div>
     """
 
@@ -221,6 +231,7 @@ def render_html_page(
         <a class='site-title' href='/'>News Intelligence</a>
         {render_search_form()}
         {render_navigation(counts_by_category)}
+        {render_current_user(authenticated_account)}
         {render_top_bar(authenticated_account)}
     </div>
 </header>

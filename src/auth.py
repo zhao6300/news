@@ -22,6 +22,16 @@ def password_matches(password: str, account: Account) -> bool:
     return hash_password(password, account.salt) == account.password_hash
 
 
+class Session:
+    def __init__(self, token: str, account_id: int):
+        self.token = token
+        self.account_id = account_id
+
+    @property
+    def token_value(self) -> str:
+        return f"portal_session={self.token}"
+
+
 @dataclass(frozen=True, slots=True)
 class AuthenticatedAccount:
     id: int
@@ -58,6 +68,11 @@ def demo_account() -> Account:
 
 def demo_account_manager() -> AccountManager:
     return AccountManager((demo_account(),))
+
+
+def install_logged_in_cookie(session_manager) -> str:
+    session = session_manager.create(demo_account())
+    return f"portal_session={session.token}"
 
 
 def resolve_authenticated_account(
