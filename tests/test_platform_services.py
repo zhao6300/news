@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from extensions.builtin import builtin_collections
+from connectors import SourceConnector
 from services import InMemoryPlatformService
 
 
