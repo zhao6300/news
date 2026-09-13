@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
+from hashlib import sha256
 from typing import Generic, Protocol, TypeVar
+from urllib.parse import urlsplit
+from xml.etree import ElementTree
 
 from models import TextEntry
-from scaffold import Article, PlatformExtension
+from scaffold import Article, CategoryGroup, PlatformExtension
 
 
 TItem = TypeVar("TItem")
@@ -119,3 +124,65 @@ class ArticleIngestionScheduler:
             self.repository.get(article.id)
         except KeyError:
             self.repository.add(article)
+
+
+class RssItemConnector:
+    def __init__(
+        self,
+        slug: str,
+        source: str,
+        category_id: CategoryGroup,
+        *,
+        feed_xml: str,
+    ) -> None:
+        self.slug = slug
+        self.source = source
+        self.category_id = category_id
+        self.feed_xml = feed_xml
+
+    def fetch(self) -> list[Article]:
+        root = ElementTree.fromstring(self.feed_xml)
+        return [
+            self._article_from_item(item)
+            for item in root.iter("item")
+        ]
+
+    def _article_from_item(self, item: ElementTree.Element) -> Article:
+        title = self._item_text(item, "title")
+        url = self._item_text(item, "link")
+        summary = self._item_text(item, "description")
+        published_at = self._item_date(item)
+        tags = tuple(node.text.strip() for node in item.findall("category") if node.text and node.text.strip())
+        return Article(
+            id=self._article_id(url),
+            title=title,
+            url=url,
+            summary=summary,
+            tags=tags,
+            source=self.source,
+            category_id=self.category_id,
+            rank=1,
+            published_at=published_at,
+        )
+
+    @staticmethod
+    def _item_text(item: ElementTree.Element, tag: str) -> str:
+        node = item.find(tag)
+        if node is None or not node.text or not node.text.strip():
+            raise ValueError(f"RSS item is missing {tag}.")
+        return node.text.strip()
+
+    @staticmethod
+    def _item_date(item: ElementTree.Element) -> datetime:
+        node = item.find("pubDate")
+        if node is None or not node.text:
+            raise ValueError("RSS item is missing pubDate.")
+        return parsedate_to_datetime(node.text.strip()).astimezone(UTC)
+
+    @staticmethod
+    def _article_id(url: str) -> int:
+        parsed = urlsplit(url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("RSS item link must include scheme and host.")
+        digest = sha256(url.encode("utf-8")).digest()
+        return int.from_bytes(digest[:8], "big") >> 1
