@@ -62,6 +62,14 @@ def test_article_tags_render_individually():
     assert "<span class='tag'>technology</span>" in html
 
 
+def test_article_items_render_collected_tags():
+    article = _article(1)
+
+    html = render_article_items([article])
+
+    assert "<span class='tag'>technology</span>" in html
+
+
 def test_authenticated_search_page_accepts_category_filter():
     service = InMemoryPlatformService(builtin_collections())
     session_manager = SessionManager()

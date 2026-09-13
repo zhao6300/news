@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from json import dumps, loads
 from pathlib import Path
 from sqlite3 import connect
 
@@ -45,7 +46,7 @@ class SQLiteArticleLayer(RepositoryLayer):
                     article.title,
                     article.url,
                     article.summary,
-                    ",".join(article.tags),
+                    dumps(article.tags),
                     article.source,
                     article.category_id,
                     article.rank,
@@ -115,7 +116,7 @@ def _article_from_row(row: tuple) -> Article:
         title=row[1],
         url=row[2],
         summary=row[3],
-        tags=tuple(tag for tag in row[4].split(",") if tag),
+        tags=tuple(str(tag) for tag in loads(row[4])),
         source=row[5],
         category_id=CategoryGroup(row[6]),
         rank=row[7],

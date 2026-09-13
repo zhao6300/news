@@ -66,7 +66,7 @@ def test_sqlite_preserves_tag_boundaries(tmp_path):
             "Tagged article",
             "https://example.com/tagged",
             "Example summary.",
-            ("AI", "Information Architecture"),
+            ("AI", "Information Architecture, models"),
             "Example",
             CategoryGroup.TECH,
             1,
@@ -74,4 +74,4 @@ def test_sqlite_preserves_tag_boundaries(tmp_path):
         )
     )
 
-    assert repository.get(1).tags == ("AI", "Information Architecture")
+    assert repository.get(1).tags == ("AI", "Information Architecture, models")

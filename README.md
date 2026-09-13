@@ -65,6 +65,7 @@ RSS sources can be enabled with `PLATFORM_FEEDS`. Each record requires `slug`, `
 Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional `category` slug such as `models`.
 Search result pagination preserves the active `q`, `category`, and `page_size` filters.
 Article detail pages display source, category, and stored tags.
+Article cards and the search API include the same collected tags.
 
 ## Known next steps
 

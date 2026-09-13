@@ -74,6 +74,7 @@ def render_article_items(articles: Sequence[Article]) -> str:
         <article class='article-card'>
             <a href='/article/{article.id}'><strong>{escape(article.title)}</strong></a>
             <p>{escape(article.summary)}</p>
+            {render_article_tags(article)}
             <span class='meta'>{escape(article.published_at_display)} · {escape(article.source)} · {escape(category_label(article.category_id))}</span>
         </article>
         """
@@ -547,10 +548,11 @@ class PortalHandler(BaseHTTPRequestHandler):
                     "total": result.total,
                     "items": [
                         {
-                            "id": article.id,
-                            "title": article.title,
-                            "summary": article.summary,
-                            "category": article.category_id.value,
+                        "id": article.id,
+                        "title": article.title,
+                        "summary": article.summary,
+                        "category": article.category_id.value,
+                        "tags": list(article.tags),
                         }
                         for article in result.items
                     ],
