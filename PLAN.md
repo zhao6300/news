@@ -43,8 +43,8 @@ Deliver a clean, login-gated Web interface with category navigation.
 
 Acceptance:
 
-- Static UI and API endpoints are independently documented.
-- Login and category listing flows are covered.
+- The UI communicates through the service layer, not directly with extensions.
+- The health endpoint is covered by tests.
 
 ## Phase 06 — Test Coverage
 

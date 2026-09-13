@@ -19,3 +19,8 @@ The project starts with a verified skeleton, then adds content taxonomy, storage
 ## Built-in extensions
 
 The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class extension categories so new sources can be added without changing downstream services.
+
+## Web endpoints
+
+- `/` — home dashboard with all extension entries.
+- `/extensions/{slug}` — list articles for one extension.
