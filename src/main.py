@@ -125,16 +125,17 @@ def main() -> None:
     port = int(os.getenv("PLATFORM_PORT", "8000"))
     public_root = Path(__file__).resolve().parent.parent / "frontend"
 
-    def handler(*args: object, **kwargs: object):
+    def handler(request: object, client_address: object, http_server: object):
         return PortalHandler(
             service,
             AccountManager((configured_account(),)),
             SessionManager(),
             search_engine,
-            public_root,
+            request,
+            client_address,
+            http_server,
+            public_root=public_root,
             ingestion_reports=ingestion_reports,
-            *args,
-            **kwargs,
         )
 
     server = ThreadingHTTPServer((host, port), handler)
