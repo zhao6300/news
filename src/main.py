@@ -3,7 +3,7 @@ from typing import Sequence
 
 from extensions.builtin import builtin_collections
 from app import PortalHandler
-from auth import demo_account_manager
+from auth import AccountManager, configured_account
 from sessions import SessionManager
 from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
@@ -42,7 +42,7 @@ def main() -> None:
     def handler(*args: object, **kwargs: object):
         return PortalHandler(
             service,
-            demo_account_manager(),
+            AccountManager((configured_account(),)),
             SessionManager(),
             search_engine,
             *args,

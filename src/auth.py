@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
+from os import getenv
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,3 +44,19 @@ def demo_account() -> Account:
 
 def demo_account_manager() -> AccountManager:
     return AccountManager((demo_account(),))
+
+
+def configured_account() -> Account:
+    email = getenv("PLATFORM_ACCOUNT_EMAIL")
+    password = getenv("PLATFORM_ACCOUNT_PASSWORD")
+    if not (email and password):
+        raise RuntimeError("PLATFORM_ACCOUNT_EMAIL and PLATFORM_ACCOUNT_PASSWORD are both required.")
+    email = email.strip().lower()
+    if not email:
+        raise RuntimeError("PLATFORM_ACCOUNT_EMAIL cannot be blank.")
+    return Account(
+        id=1,
+        email=email,
+        password_hash=hash_password(password, "portal-settings"),
+        salt="portal-settings",
+    )

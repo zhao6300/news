@@ -27,6 +27,8 @@ make run
 
 Set `PLATFORM_DB` to a writable SQLite file to preserve article state across restarts. Without the variable, the starter uses in-memory seeded data.
 
+Override the placeholder account with `PLATFORM_ACCOUNT_EMAIL` and `PLATFORM_ACCOUNT_PASSWORD`. If either variable is missing, the platform fails to start rather than silently using a partial account.
+
 ## Web experience
 
 The platform provides a clean home view, extension-linked navigation, category listings, article detail pages, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
@@ -57,6 +59,5 @@ Pagination supports `?page=` and `?page_size=1..50`.
 
 ## Known next steps
 
-1. Replace the placeholder password store with settings-backed account records and real session cookies.
-2. Add source scheduling and ingestion diagnostics.
-3. Add category filters, article result counts, and richer search.
+1. Add source scheduling and ingestion diagnostics.
+2. Add category filters, article result counts, and richer search.
