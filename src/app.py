@@ -3,11 +3,16 @@ from __future__ import annotations
 from html import escape
 from collections.abc import Sequence
 from json import dumps
+from dataclasses import dataclass
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlencode, urlparse
 
-from auth import AccountManager
+from auth import (
+    AccountManager,
+    AuthenticatedAccount,
+    resolve_authenticated_account,
+)
 from connectors import IngestionReport
 from services import InMemoryPlatformService
 from sessions import SessionManager
@@ -104,6 +109,41 @@ def render_navigation(counts_by_category: dict[CategoryGroup, int] | None = None
     return f"<div class='category-nav'>{''.join(links)}</div>"
 
 
+def render_current_user(account: AuthenticatedAccount | None) -> str:
+    if account is None:
+        return ""
+    return f"""
+    <div class='user-menu'>
+        <a href='/logout'>Log out ({escape(account.email)})</a>
+    </div>
+    """
+
+
+def render_top_bar(authenticated_account: AuthenticatedAccount | None) -> str:
+    if authenticated_account is None:
+        return """
+    <div class='current-account-bar'>
+        <a href='/login'>Sign In</a>
+    </div>
+    """
+    return f"""
+    <div class='current-account-bar signed-in'>
+        <span>Sign in as {escape(authenticated_account.email)}</span>
+        <a href='/logout'>Log Out</a>
+    </div>
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class LoginRequest:
+    email: str
+    password: str
+
+
+def authenticate_session(account_manager: AccountManager, request: LoginRequest):
+    return account_manager.authenticate(request.email.lower(), request.password)
+
+
 def render_search_form(query: str = "") -> str:
     return f"""
     <form class='search-form' method='get' action='/search'>
@@ -136,7 +176,12 @@ def _search_url(query: str, category: CategoryGroup | None = None) -> str:
     return f"/search?{urlencode(parameters)}"
 
 
-def render_html_page(title: str, body: str, counts_by_category: dict[CategoryGroup, int] | None = None) -> str:
+def render_html_page(
+    title: str,
+    body: str,
+    counts_by_category: dict[CategoryGroup, int] | None = None,
+    authenticated_account: AuthenticatedAccount | None = None,
+) -> str:
     return f"""<!doctype html>
 <html lang='en'>
 <head>
@@ -174,6 +219,7 @@ def render_html_page(title: str, body: str, counts_by_category: dict[CategoryGro
         .pagination {{ color: var(--muted); font-size: .94rem; margin-top: 1.3rem; }}
         footer {{ border-top: 1px solid var(--edge); color: var(--muted); font-size: .88rem; padding: 1.2rem 1.1rem 2rem; }}
         .login-panel {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .8rem; max-width: 22rem; padding: 1.4rem; }}
+        .current-account-bar {{ margin-top: 1rem; padding: .75rem 1rem; border: 1px solid var(--edge); border-radius: .5rem; background: rgba(255,255,255,.08); color: #fff; display: flex; justify-content: space-between; gap: .8rem; }}
         form:not(.search-form) label {{ display: block; font-weight: 600; margin: .8rem 0 .2rem; }}
         form:not(.search-form) input {{ border: 1px solid var(--edge); border-radius: .4rem; padding: .6rem .7rem; width: 100%; }}
         form:not(.search-form) button {{ background: var(--accent); border: 0; border-radius: .4rem; color: #fff; cursor: pointer; display: block; font: inherit; margin-top: 1.1rem; padding: .6rem .9rem; }}
@@ -185,6 +231,8 @@ def render_html_page(title: str, body: str, counts_by_category: dict[CategoryGro
         <a class='site-title' href='/'>News Intelligence</a>
         {render_search_form()}
         {render_navigation(counts_by_category)}
+        {render_current_user(authenticated_account)}
+        {render_top_bar(authenticated_account)}
     </div>
 </header>
 <main class='page layout'>{body}</main>
@@ -289,13 +337,24 @@ class PortalHandler(BaseHTTPRequestHandler):
     def current_session(self):
         return self.session_manager.resolve(self.session_token())
 
+    def current_account(self) -> AuthenticatedAccount | None:
+        return resolve_authenticated_account(
+            self.account_manager,
+            self.current_session(),
+        )
+
     def show_home_page(self) -> None:
         sections = "".join(render_extension_section(extension) for extension in self.service.extensions)
         body = f"""
 <p class='page-meta'>Curated artificial intelligence progress and practical technology briefings.</p>
 {sections}
 """
-        html_content = render_html_page("Home", body, self.service.counts_by_category())
+        html_content = render_html_page(
+            "Home",
+            body,
+            self.service.counts_by_category(),
+            self.current_account(),
+        )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
@@ -376,15 +435,15 @@ class PortalHandler(BaseHTTPRequestHandler):
     def handle_login(self) -> None:
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
         submitted = parse_qs(body.decode("utf-8"))
-        email = submitted.get("email", [""])[0]
-        password = submitted.get("password", [""])[0]
-        if not email or not password:
-            self.show_login_page("Email and password are required.", status=400)
-            return
-        if self.account_manager.authenticate(email, password) is None:
+        request = LoginRequest(
+            email=submitted.get("email", [""])[0],
+            password=submitted.get("password", [""])[0],
+        )
+        account = authenticate_session(self.account_manager, request)
+        if account is None:
             self.show_login_page("Invalid credentials.", status=401)
             return
-        session = self.session_manager.create(self.account_manager.authenticate(email, password))
+        session = self.session_manager.create(account)
         html_content = render_html_page(
             "Signed In",
             "<h1>Welcome back</h1><p>You are signed in to the platform.</p>",

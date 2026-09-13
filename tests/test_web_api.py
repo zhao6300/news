@@ -8,8 +8,16 @@ from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
 from extensions.builtin import builtin_collections
-from app import PortalHandler, render_article_items, render_extension_section, render_extension_view, render_navigation
-from auth import AccountManager, demo_account_manager
+from app import (
+    PortalHandler,
+    render_article_items,
+    render_extension_section,
+    render_extension_view,
+    render_login_form,
+    render_navigation,
+    render_top_bar,
+)
+from auth import AccountManager, demo_account_manager, install_logged_in_cookie
 from connectors import IngestionReport
 from sessions import SessionManager
 from searchers import InMemorySearchEngine
@@ -133,6 +141,12 @@ def test_extension_view_summarizes_articles_by_category():
     assert "/category/news" in html
 
 
+def test_authentication_page_uses_plain_labels():
+    html = render_login_form()
+
+    assert "Sign In" in html
+
+
 def test_home_page_is_served_by_runtime_handler():
     service = InMemoryPlatformService(builtin_collections())
     account_manager = AccountManager(())
@@ -151,6 +165,41 @@ def test_home_page_is_served_by_runtime_handler():
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_home_page_renders_logout_for_authenticated_cookie():
+    session_manager = SessionManager()
+    cookie = install_logged_in_cookie(session_manager)
+    service = InMemoryPlatformService(builtin_collections())
+    service.repository = InMemoryRepositoryLayer()
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            InMemorySearchEngine([]),
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urlopen(
+            Request(
+                f"http://127.0.0.1:{server.server_port}/",
+                headers={"Cookie": cookie},
+            )
+        ) as response:
+            assert response.status == 200
+            payload = response.read().decode("utf-8")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+    assert "<a href='/logout'>Log out (member@example.com)</a>" in payload
 
 
 def test_login_submission_reports_valid_credentials():
