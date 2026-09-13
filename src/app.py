@@ -72,6 +72,21 @@ def render_search_page(title: str, body: str) -> str:
     return render_html_page(title, body)
 
 
+def render_search_results(query: str, result: Page) -> str:
+    if not query:
+        heading = "Search"
+    elif result.total:
+        heading = f"Search: {query}"
+    else:
+        heading = "No matching content"
+    body = f"""
+<main><h1>{escape(heading)}</h1>
+<p>{result.total} matching page{'s' if result.total != 1 else ''}</p>
+<ul>{render_article_items(result.items)}</ul>
+</main>"""
+    return render_html_page("Search", body)
+
+
 class PortalHandler(BaseHTTPRequestHandler):
     def __init__(
         self,
@@ -111,6 +126,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'{"status": "ok"}')
         elif path == "/api/search":
             self.handle_search_api()
+        elif path == "/search":
+            self.handle_search_page()
         elif path == "/login":
             self.show_login_page()
         else:
@@ -281,7 +298,17 @@ class PortalHandler(BaseHTTPRequestHandler):
                 },
                 ensure_ascii=False,
             ).encode("utf-8"),
-        )
+    )
+
+    def handle_search_page(self) -> None:
+        query = parse_qs(urlparse(self.path).query)
+        text = query.get("q", [""])[0]
+        result = self.search_engine.search(text)
+        html_content = render_search_results(text, result)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html_content.encode("utf-8"))
 
     def log_message(self, message: str, *args: object) -> None:
         pass
