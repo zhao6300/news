@@ -9,6 +9,7 @@ A phased build for a modular AI information platform covering news, technology, 
 - `src/connectors.py` — extension protocol for new information sources.
 - `src/extensions/builtin.py` — seeded content for the initial platform schema.
 - `src/services.py` — service-layer access to extensions.
+- `src/sessions.py` — login session store.
 - `src/storage.py` — replaceable repository layer and simple pagination.
 - `tests/` — focused unit and HTTP integration tests.
 
@@ -26,7 +27,7 @@ make run
 
 ## Web experience
 
-The platform provides a clean home view, extension-linked navigation, category listings, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
+The platform provides a clean home view, extension-linked navigation, category listings, article detail pages, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
 
 ## How to inspect
 
@@ -45,7 +46,8 @@ The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class 
 - `/extensions/{slug}` — seeded extension listing.
 - `/category/{slug}` — category catalog with pagination.
 - `/article/{id}` — article detail page.
-- `/login` — early development login form.
+- `/login` — login form and session creation.
+- `/logout` — session revocation.
 - `/health` — process status check.
 
 Pagination supports `?page=` and `?page_size=1..50`.

@@ -35,6 +35,7 @@ Implement category-scoped queries, creation, and status tracking.
 Acceptance:
 
 - Business rules are isolated from storage and web code.
+- Account authentication is covered by in-memory session tests.
 - Service behavior is covered by unit tests.
 
 ## Phase 05 — Web UI
