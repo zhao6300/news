@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from typing import Generic, Protocol, TypeVar
+from collections.abc import Callable
 from urllib.parse import urlsplit
 from xml.etree import ElementTree
 
@@ -133,15 +134,28 @@ class RssItemConnector:
         source: str,
         category_id: CategoryGroup,
         *,
-        feed_xml: str,
+        feed_url: str | None = None,
+        feed_xml: str | None = None,
+        fetcher: Callable[[str], str] | None = None,
     ) -> None:
         self.slug = slug
         self.source = source
         self.category_id = category_id
+        self.feed_url = feed_url
         self.feed_xml = feed_xml
+        self.fetcher = fetcher
+
+    @property
+    def source_job(self) -> SourceJob[Article]:
+        return SourceJob(self.slug, self.source, self)
 
     def fetch(self) -> list[Article]:
-        root = ElementTree.fromstring(self.feed_xml)
+        if self.feed_xml is None:
+            if not self.feed_url or self.fetcher is None:
+                raise ValueError("A feed URL and fetcher are required without inline XML.")
+            root = ElementTree.fromstring(self.fetcher(self.feed_url))
+        else:
+            root = ElementTree.fromstring(self.feed_xml)
         return [
             self._article_from_item(item)
             for item in root.iter("item")
