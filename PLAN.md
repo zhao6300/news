@@ -102,9 +102,9 @@ Acceptance:
 - Authentication confirms the account remains active.
 - Unit and integration suites cover profile defaults, duplicate prevention, and inactive login rejection.
 
-## Phase 11 — Account Access Management Service
+## Phase 11 — Owner Registration and API-Access Layer
 
-Scope: add an internal owner-scoped access-management service that can register regenerate and verify account API keys without exposing a second UI namespace.
+Scope: add an internal owner-scoped access-management layer that can register regenerate and verify account API keys without exposing a second UI namespace.
 
 Acceptance:
 
