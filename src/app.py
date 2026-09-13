@@ -74,14 +74,14 @@ def render_article_items(articles: Sequence[Article]) -> str:
 
 
 def render_login_form(message: str | None = None) -> str:
-    notice = f"<p>{escape(message)}</p>" if message else ""
-    return f"""<div class='login-panel'><h1>Sign In</h1>{notice}
+    notice = f"<p class='form-error'>{escape(message)}</p>" if message else ""
+    return f"""<div class='login-panel'><h1>登录</h1>{notice}
 <form method='post' action='/login'>
-<label for='email'>Email</label>
+<label for='email'>邮箱</label>
 <input id='email' name='email' type='email' required>
-<label for='password'>Password</label>
+<label for='password'>密码</label>
 <input id='password' name='password' type='password' required>
-<button type='submit'>Sign In</button>
+<button type='submit'>登录</button>
 </form></div>"""
 
 
@@ -352,7 +352,7 @@ def render_html_page(
     authenticated_account: AuthenticatedAccount | None = None,
 ) -> str:
     return f"""<!doctype html>
-<html lang='en'>
+<html lang='zh-CN'>
 <head>
     <meta charset='utf-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
@@ -390,6 +390,7 @@ def render_html_page(
         .pagination {{ color: var(--muted); font-size: .94rem; margin-top: 1.3rem; }}
         footer {{ border-top: 1px solid var(--edge); color: var(--muted); font-size: .88rem; padding: 1.2rem 1.1rem 2rem; }}
         .login-panel {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .8rem; max-width: 22rem; padding: 1.4rem; }}
+        .form-error {{ color: #b3261e; }}
         .current-account-bar {{ margin-top: 1rem; padding: .75rem 1rem; border: 1px solid var(--edge); border-radius: .5rem; background: rgba(255,255,255,.08); color: #fff; display: flex; justify-content: space-between; gap: .8rem; }}
         form:not(.search-form) label {{ display: block; font-weight: 600; margin: .8rem 0 .2rem; }}
         form:not(.search-form) input {{ border: 1px solid var(--edge); border-radius: .4rem; padding: .6rem .7rem; width: 100%; }}
@@ -468,6 +469,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'{"status": "ok"}')
         elif path == "/api/ingestion":
             self.handle_ingestion_api()
+        elif path == "/api/sources":
+            self.handle_sources_api()
         elif path == "/api/search":
             self.handle_search_api()
         elif path == "/search":
@@ -475,7 +478,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         elif path == "/account":
             self.show_account_page()
         elif path == "/login":
-            self.show_login_page()
+            self.handle_login_view()
         else:
             self.show_not_found()
 
@@ -617,11 +620,19 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.wfile.write(html_content.encode("utf-8"))
 
     def show_login_page(self, message: str | None = None, status: int = 200) -> None:
-        html_content = render_html_page("Sign In", render_login_form(message))
+        html_content = render_html_page("登录", render_login_form(message))
         self.send_response(status)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
         self.wfile.write(html_content.encode("utf-8"))
+
+    def handle_login_view(self) -> None:
+        if self.current_account() is not None:
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self.end_headers()
+            return
+        self.show_login_page()
 
     def handle_login(self) -> None:
         body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
@@ -632,7 +643,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         )
         account = authenticate_session(self.account_manager, request)
         if account is None:
-            self.show_login_page("Invalid credentials.", status=401)
+            self.show_login_page("登录失败，请检查邮箱和密码。", status=401)
             return
         session = self.session_manager.create(account)
         html_content = render_html_page(
@@ -709,6 +720,47 @@ class PortalHandler(BaseHTTPRequestHandler):
                 }
                 for report in self.ingestion_reports
             ],
+        }
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    def handle_sources_api(self) -> None:
+        statuses = {report.slug: report for report in self.ingestion_reports}
+        sources = []
+        for extension in self.service.get_extensions():
+            report = statuses.get(extension.slug)
+            category_counts: dict[CategoryGroup, int] = {}
+            for entry in extension.entries:
+                category_counts[entry.category_id] = category_counts.get(entry.category_id, 0) + 1
+
+            sources.append(
+                {
+                    "slug": extension.slug,
+                    "label": extension.label,
+                    "url": f"/extensions/{extension.slug}",
+                    "article_count": len(extension.entries),
+                    "categories": [
+                        {
+                            "slug": category.value,
+                            "label": category_label(category),
+                            "article_count": count,
+                        }
+                        for category, count in category_counts.items()
+                    ],
+                    "ingestion": None
+                    if report is None
+                    else {
+                        "status": "ok" if report.succeeded else "failed",
+                        "item_count": report.item_count,
+                        "error": report.error,
+                    },
+                }
+            )
+        payload = {
+            "status": "ok",
+            "sources": sources,
         }
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")

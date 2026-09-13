@@ -7,6 +7,7 @@ from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import AccountManager, configured_account
 from connectors import ArticleIngestionScheduler, ConnectorRegistry, RssItemConnector, SourceJob
+from connectors import IngestionReport
 from sessions import SessionManager
 from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
@@ -93,28 +94,31 @@ def run_ingestion_reports(
     return scheduler.run()
 
 
-def platform_components(database_path: str | None = None) -> tuple[Sequence, RepositoryLayer, InMemorySearchEngine, InMemoryPlatformService]:
+def platform_components(
+    database_path: str | None = None,
+) -> tuple[Sequence, RepositoryLayer, InMemorySearchEngine, InMemoryPlatformService, Sequence[IngestionReport]]:
     extensions = builtin_collections()
     if not extensions:
         raise RuntimeError("The platform must load at least one extension.")
     feed_connectors = configured_rss_connectors(os.getenv("PLATFORM_FEEDS"))
 
     repository = SQLiteArticleLayer(database_path) if database_path else InMemoryRepositoryLayer()
-    if repository.total == 0:
-        run_ingestion_reports(extensions, repository, feed_connectors)
-        if isinstance(repository, InMemoryRepositoryLayer):
-            repository.next_id = max(repository.articles, default=0) + 1
+    ingestion_reports = run_ingestion_reports(extensions, repository, feed_connectors)
+    if isinstance(repository, InMemoryRepositoryLayer):
+        repository.next_id = max(repository.articles, default=0) + 1
     if feed_connectors:
         extensions = tuple(extensions) + tuple(feed_source_extensions(feed_connectors, repository.all()))
 
     search_engine = InMemorySearchEngine(repository.all())
     service = InMemoryPlatformService(extensions)
     service.repository = repository
-    return extensions, repository, search_engine, service
+    return extensions, repository, search_engine, service, ingestion_reports
 
 
 def main() -> None:
-    extensions, repository, search_engine, service = platform_components(os.getenv("PLATFORM_DB"))
+    extensions, repository, search_engine, service, ingestion_reports = platform_components(
+        os.getenv("PLATFORM_DB"),
+    )
     feed_connectors = configured_rss_connectors(os.getenv("PLATFORM_FEEDS"))
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
@@ -125,7 +129,7 @@ def main() -> None:
             AccountManager((configured_account(),)),
             SessionManager(),
             search_engine,
-            ingestion_reports=run_ingestion_reports(extensions, repository, feed_connectors),
+            ingestion_reports=ingestion_reports,
             *args,
             **kwargs,
         )

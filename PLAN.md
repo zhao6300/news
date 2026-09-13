@@ -188,3 +188,15 @@ Acceptance:
 - Platform can run inside an account environment and use direct inspect, direct search, and an account menu.
 - Search provides responsive page behavior and can load image results supplied through URL queries.
 - The final phase records environment setup, commands, test evidence, known limitations, and next actions.
+
+## Phase 20 — Login Experience and Source Status
+
+Scope: make the login page usable with Chinese labels and explicit failure feedback, redirect signed-in visitors
+to the dashboard, and expose the already registered built-in and RSS connectors through `/api/sources`.
+
+Acceptance:
+
+- The login form presents Chinese field labels and keeps invalid submissions at HTTP 401.
+- An authenticated visitor opening `/login` is redirected to `/` without replacing the existing session.
+- `/api/sources` reports each service connector, article count, category counts, and ingestion diagnostics.
+- No new dependency is introduced; RSS remains configured through `PLATFORM_FEEDS`.

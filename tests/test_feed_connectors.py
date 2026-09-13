@@ -60,10 +60,11 @@ def test_configured_feed_ingests_and_builds_extension(monkeypatch, tmp_path):
     )
 
     database = tmp_path / "feed.db"
-    _, repository, _, service = platform_components(database)
+    _, repository, _, service, reports = platform_components(database)
 
     extension = service.get_extension("research-rss")
     assert extension.label == "Research"
     assert len(extension.entries) == 1
     assert repository.total == 7
+    assert [report.slug for report in reports] == ["builtin", "research-rss"]
     assert configured_rss_connectors(getenv("PLATFORM_FEEDS"))[0].slug == "research-rss"

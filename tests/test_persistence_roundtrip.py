@@ -11,7 +11,7 @@ from sqlite_store import SQLiteArticleLayer
 
 def test_configured_persistence_survives_reopening(tmp_path):
     database = tmp_path / "platform.db"
-    _, _, _, first_service = platform_components(database)
+    _, _, _, first_service, _ = platform_components(database)
     second_service = platform_components(database)[3]
 
     article = first_service.get_article(1)

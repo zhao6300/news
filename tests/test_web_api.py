@@ -2,6 +2,8 @@ from __future__ import annotations
 from urllib.parse import urlparse
 
 import threading
+import pytest
+from http.client import HTTPConnection
 from datetime import UTC, datetime
 from json import loads
 from urllib.parse import urlencode
@@ -158,10 +160,12 @@ def test_extension_view_summarizes_articles_by_category():
     assert "/category/news" in html
 
 
-def test_authentication_page_uses_plain_labels():
+def test_authentication_page_uses_chinese_labels():
     html = render_login_form()
 
-    assert "Sign In" in html
+    assert "登录" in html
+    assert "邮箱" in html
+    assert "密码" in html
 
 
 def test_home_page_is_served_by_runtime_handler():
@@ -178,6 +182,103 @@ def test_home_page_is_served_by_runtime_handler():
         with urlopen(f"http://127.0.0.1:{server.server_port}/") as response:
             assert response.status == 200
             assert "Sign In" in response.read().decode("utf-8")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_login_failure_keeps_chinese_error():
+    service = InMemoryPlatformService(builtin_collections())
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            SessionManager(),
+            InMemorySearchEngine([]),
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    data = urlencode({"email": "member@example.com", "password": "wrong-password"}).encode("utf-8")
+    try:
+        try:
+            urlopen(Request(f"http://127.0.0.1:{server.server_port}/login", data=data, method="POST"))
+        except HTTPError as error:
+            assert error.code == 401
+            assert "登录失败" in error.read().decode("utf-8")
+        else:
+            pytest.fail("Invalid login should return HTTP 401.")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_authenticated_login_view_redirects_home():
+    session_manager = SessionManager()
+    cookie = install_logged_in_cookie(session_manager)
+    service = InMemoryPlatformService(builtin_collections())
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            InMemorySearchEngine([]),
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        connection = HTTPConnection("127.0.0.1", server.server_port)
+        connection.request("GET", "/login", headers={"Cookie": cookie})
+        response = connection.getresponse()
+        payload = response.read()
+        assert response.status == 303
+        assert response.headers["Location"] == "/"
+        assert not payload
+        connection.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_sources_api_reports_existing_connectors():
+    service = InMemoryPlatformService(builtin_collections())
+    session_manager = SessionManager()
+    cookie = install_logged_in_cookie(session_manager)
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            InMemorySearchEngine([]),
+            ingestion_reports=(IngestionReport("builtin", "Builtin", 6),),
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urlopen(Request(f"http://127.0.0.1:{server.server_port}/api/sources", headers={"Cookie": cookie})) as response:
+            assert response.status == 200
+            payload = loads(response.read().decode("utf-8"))
+
+        assert payload["status"] == "ok"
+        source = payload["sources"][0]
+        assert source["slug"] == "builtin"
+        assert source["article_count"] == 6
+        assert source["ingestion"]["status"] == "ok"
+        assert source["ingestion"]["item_count"] == 6
     finally:
         server.shutdown()
         server.server_close()
