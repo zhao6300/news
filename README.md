@@ -42,7 +42,9 @@ make run
 
 ## Built-in extensions
 
-The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class extension categories so new sources can be added without changing downstream services.
+The platform exposes `AI`, `News`, `Technology`, `Models`, and `Reviews` as first-class extension categories so new sources can be added without changing downstream services.
+
+Custom sources can implement the `fetch` protocol, be wrapped in the connector registry, and appear in the startup ingestion report without changing the Web routes.
 
 ## Web endpoints
 
