@@ -14,6 +14,7 @@ from searchers import SearchEngine
 from scaffold import PlatformExtension
 from scaffold import Article
 from scaffold import CategoryGroup
+from storage import Page
 
 
 def render_extension_section(extension: PlatformExtension) -> str:
@@ -65,6 +66,10 @@ def render_html_page(title: str, body: str) -> str:
 <footer>© 2026 News Intelligence Platform</footer>
 </body>
 </html>"""
+
+
+def render_search_page(title: str, body: str) -> str:
+    return render_html_page(title, body)
 
 
 class PortalHandler(BaseHTTPRequestHandler):
@@ -123,7 +128,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         return morsel.value if morsel else None
 
     def is_authenticated(self, path: str) -> bool:
-        return path in {"/login", "/health", "/api/search"} or self.current_session() is not None
+        return path in {"/login", "/health"} or self.current_session() is not None
 
     def current_session(self):
         return self.session_manager.resolve(self.session_token())
