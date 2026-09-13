@@ -75,3 +75,115 @@ Acceptance:
 
 - `README.md` explains run/test workflows.
 - Known issues and next actions are explicit.
+
+## Fine-Grained Continuation Plan
+
+This backlog maps the already-completed Phase 01–08 baseline into smaller restartable steps.
+Each phase requires green pre-phase tests, focused changes, updated tests and README, an
+ending Git sweep, review of the focused diff, and one independent local commit.
+
+## Phase 09 — Roadmap and Agent Rules
+
+Scope: define Phase 09–18 acceptance and testing workflow in `PLAN.md` and `AGENTS.md`.
+
+Acceptance:
+
+- The continuation sequence has concrete UI, API, persistence, service, testing, and operational scopes.
+- The rules require Chinese user-facing text, root-cause diagnosis, focused diff review, clean ending status, and one commit for each phase.
+
+## Phase 10 — Account Profile and Ownership
+
+Scope: extend the stable account model with display name, timezone, active status, and last-seen timestamp; upgrade storage and service access to require the first account.
+
+Acceptance:
+
+- Account creation rejects duplicate email IDs and validates non-empty profile fields.
+- Persisted accounts keep profile properties and status through storage round trips.
+- Persistence initialization fails rather than accepting an empty account table.
+- Service account creation uses the real storage layer and authentication rejects inactive accounts.
+
+## Phase 11 — Account Service and Owner API
+
+Scope: add owner-scoped management methods and `/account`, `/api/account`, `/api/accounts` operations.
+
+Acceptance:
+
+- Authentication remains constant-time and updates last-seen state for valid credentials.
+- Owner API supports create, activate, deactivate, update, and delete operations.
+- Each operation is tested for active membership, ownership, and HTTP handling.
+
+## Phase 12 — Account Browser Interface
+
+Scope: add private profile settings, admin account settings, and public personal cards.
+
+Acceptance:
+
+- `/account/profile.html`, `/account/admin.html`, `/account/account.html`, and `/account/account/{slug}.html` remain private to active owners.
+- Forms return 303 redirects according to each action contract.
+- `/api/logout` logs out directly; the account pages expose a privileged logout icon.
+- HTML and API behavior are covered with signed- and unsigned-path requests.
+
+## Phase 13 — Preferences and News Subscription
+
+Scope: add a `Preferences` dataclass keyed by slug with per-model subscriptions and newsletter settings.
+
+Acceptance:
+
+- The model supports compact JSON defaults, cloning, default typing, and profile typing.
+- Account creation initializes preferences; active membership remains the callback condition.
+- Profile settings and model subscriptions are covered before HTML/API integration.
+
+## Phase 14 — Account Data Model Upgrade
+
+Scope: replace the primitive account dataclass with `Address` and `Profile` classes and related integers.
+
+Acceptance:
+
+- Address validates three lines, country, postcode, and optional phone.
+- Profile validates handwriting and bibliography and supports data replacement.
+- Account IDs, first names, last names are stored as integers.
+- Persisted account properties, status, last-seen time, preferences, model subscriptions, and instance state are covered.
+
+## Phase 15 — Account Settings Browser UI
+
+Scope: use the upgraded model in `/account/account.html` and `/account/account/{slug}.html`.
+
+Acceptance:
+
+- Account settings compose profile sections, account controls, and controls for deleting, renaming, adding, or changing status.
+- Positive changes return 303 to the action URL.
+- Notifications are implemented without third-party frameworks.
+
+## Phase 16 — Large-Scale Content Crawl
+
+Scope: crawl 5 million URLs using a scalable crawl plan and chunk-size 2.
+
+Acceptance:
+
+- The crawl map supports 5 million deterministic URLs.
+- The crawl component supports name, description, plan, amount, and protected saver interface.
+- Setting `amount` fails when unsupported by the crawl type.
+- Google and Bing adapters implement caching and NoCcache behavior where required.
+- Initialization and API behavior are covered in tests.
+
+## Phase 17 — Crawler-to-Platform Integration
+
+Scope: feed crawled sources into the existing storage, service, and content pipeline.
+
+Acceptance:
+
+- Downloaded JSON uses content, type, and writer fields.
+- Workflows generate a cache summary, stats, map, and a JSON crawl report.
+- Serializing, loading, and batching crawl results are covered for normal and invalid content.
+- Public load/save URLs are protected by an owner gate.
+
+## Phase 18 — Search Fusion and Platform Finalization
+
+Scope: have every search tool use the shared completed search fusion and finish cross-platform behavior.
+
+Acceptance:
+
+- Website search and API search run through the same compatible search-fusion rules.
+- Platform can run inside an account environment and use direct inspect, direct search, and an account menu.
+- Search provides responsive page behavior and can load image results supplied through URL queries.
+- The final phase records environment setup, commands, test evidence, known limitations, and next actions.
