@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 from datetime import UTC, datetime
+from json import loads
 from urllib.parse import urlencode
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
@@ -9,6 +10,7 @@ from urllib.request import Request, urlopen
 from extensions.builtin import builtin_collections
 from app import PortalHandler, render_article_items, render_extension_section
 from auth import AccountManager, demo_account_manager
+from connectors import IngestionReport
 from sessions import SessionManager
 from searchers import InMemorySearchEngine
 from services import InMemoryPlatformService
@@ -50,6 +52,39 @@ def test_health_endpoint_is_api_reachable():
         with urlopen(f"http://127.0.0.1:{server.server_port}/health") as response:
             assert response.status == 200
             assert response.headers["Content-Type"] == "application/json"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_ingestion_endpoint_reports_job_status():
+    reports = (
+        IngestionReport("builtin", "Builtin", 5),
+        IngestionReport("broken", "Broken", 0, "RuntimeError('source unavailable')"),
+    )
+    service = InMemoryPlatformService(builtin_collections())
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            AccountManager(()),
+            SessionManager(),
+            InMemorySearchEngine([]),
+            ingestion_reports=reports,
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urlopen(f"http://127.0.0.1:{server.server_port}/api/ingestion") as response:
+            assert response.status == 200
+            payload = loads(response.read().decode("utf-8"))
+        assert payload["status"] == "degraded"
+        assert payload["jobs"][0]["item_count"] == 5
+        assert "source unavailable" in payload["jobs"][1]["error"]
     finally:
         server.shutdown()
         server.server_close()

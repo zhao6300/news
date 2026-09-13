@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from auth import AccountManager
+from connectors import IngestionReport
 from services import InMemoryPlatformService
 from sessions import SessionManager
 from searchers import SearchEngine
@@ -187,12 +188,14 @@ class PortalHandler(BaseHTTPRequestHandler):
         session_manager: SessionManager,
         search_engine: SearchEngine,
         *args: object,
+        ingestion_reports: Sequence[IngestionReport] = (),
         **kwargs: object,
     ) -> None:
         self.service = service
         self.account_manager = account_manager
         self.session_manager = session_manager
         self.search_engine = search_engine
+        self.ingestion_reports = list(ingestion_reports)
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
@@ -216,6 +219,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"status": "ok"}')
+        elif path == "/api/ingestion":
+            self.handle_ingestion_api()
         elif path == "/api/search":
             self.handle_search_api()
         elif path == "/search":
@@ -246,7 +251,7 @@ class PortalHandler(BaseHTTPRequestHandler):
             raise KeyError(text) from None
 
     def is_authenticated(self, path: str) -> bool:
-        return path in {"/login", "/health"} or self.current_session() is not None
+        return path in {"/login", "/health", "/api/ingestion"} or self.current_session() is not None
 
     def current_session(self):
         return self.session_manager.resolve(self.session_token())
@@ -411,6 +416,25 @@ class PortalHandler(BaseHTTPRequestHandler):
                 ensure_ascii=False,
             ).encode("utf-8"),
     )
+
+    def handle_ingestion_api(self) -> None:
+        status = "ok" if all(report.succeeded for report in self.ingestion_reports) else "degraded"
+        payload = {
+            "status": status,
+            "jobs": [
+                {
+                    "slug": report.slug,
+                    "label": report.label,
+                    "item_count": report.item_count,
+                    "error": report.error,
+                }
+                for report in self.ingestion_reports
+            ],
+        }
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(dumps(payload, ensure_ascii=False).encode("utf-8"))
 
     def handle_search_page(self) -> None:
         query = parse_qs(urlparse(self.path).query)

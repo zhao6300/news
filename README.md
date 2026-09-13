@@ -54,10 +54,10 @@ The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class 
 - `/login` — login form and session creation.
 - `/logout` — session revocation.
 - `/health` — process status check.
+- `/api/ingestion` — startup source diagnostics, including item counts and source errors.
 
 Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional `category` slug such as `models`.
 
 ## Known next steps
 
-1. Connect the ingestion scheduler to startup and expose a diagnostics endpoint.
-2. Add source-specific views and article result counts.
+1. Add source-specific views and article result counts.

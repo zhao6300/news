@@ -4,6 +4,7 @@ from typing import Sequence
 from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import AccountManager, configured_account
+from connectors import Connector, SourceJob, SourceScheduler
 from sessions import SessionManager
 from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
@@ -11,6 +12,14 @@ from searchers import InMemorySearchEngine
 from storage import InMemoryRepositoryLayer, RepositoryLayer
 from sqlite_store import SQLiteArticleLayer
 from http.server import ThreadingHTTPServer
+
+
+def run_ingestion_reports(extensions: Sequence) -> list:
+    scheduler = SourceScheduler(
+        SourceJob(extension.slug, extension.label, Connector(extension.entries))
+        for extension in extensions
+    )
+    return scheduler.run()
 
 
 def platform_components(database_path: str | None = None) -> tuple[Sequence, RepositoryLayer, InMemorySearchEngine, InMemoryPlatformService]:
@@ -35,7 +44,7 @@ def platform_components(database_path: str | None = None) -> tuple[Sequence, Rep
 
 
 def main() -> None:
-    _, _, search_engine, service = platform_components(os.getenv("PLATFORM_DB"))
+    extensions, _, search_engine, service = platform_components(os.getenv("PLATFORM_DB"))
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
 
@@ -45,6 +54,7 @@ def main() -> None:
             AccountManager((configured_account(),)),
             SessionManager(),
             search_engine,
+            ingestion_reports=run_ingestion_reports(extensions),
             *args,
             **kwargs,
         )
