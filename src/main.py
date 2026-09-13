@@ -124,12 +124,14 @@ def main() -> None:
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
     public_root = Path(__file__).resolve().parent.parent / "frontend"
+    account_manager = AccountManager((configured_account(),))
+    session_manager = SessionManager()
 
     def handler(request: object, client_address: object, http_server: object):
         return PortalHandler(
             service,
-            AccountManager((configured_account(),)),
-            SessionManager(),
+            account_manager,
+            session_manager,
             search_engine,
             request,
             client_address,

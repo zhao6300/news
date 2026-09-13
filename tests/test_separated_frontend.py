@@ -63,11 +63,17 @@ def test_public_shell_and_static_assets_are_separated():
         with urlopen(f"http://127.0.0.1:{server.server_port}/static/styles.css") as css_response:
             assert css_response.status == 200
             assert css_response.headers["Content-Type"].startswith("text/css")
+            assert css_response.headers["Cache-Control"] == "no-store"
 
         with urlopen(f"http://127.0.0.1:{server.server_port}/static/app.js") as js_response:
             assert js_response.status == 200
             assert js_response.headers["Content-Type"].startswith("text/javascript")
-            assert "async function api" in js_response.read().decode("utf-8")
+            assert js_response.headers["Cache-Control"] == "no-store"
+            frontend_script = js_response.read().decode("utf-8")
+            assert "async function api" in frontend_script
+            assert 'credentials: "include"' in frontend_script
+            assert "renderHome(bootstrap, sources.sources, articles)" in frontend_script
+            assert "articleCards = articles.items.map" in frontend_script
     finally:
         server.shutdown()
         server.server_close()

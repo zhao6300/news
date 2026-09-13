@@ -84,7 +84,7 @@ make run
 - 退出登录：`/logout`。
 - 账户页：`/account`。
 
-登录成功后，服务端会写入 `portal_session` Cookie。该 Cookie 设置为 `HttpOnly` 和 `SameSite=Lax`。
+登录成功后，服务端会写入 `portal_session` Cookie。该 Cookie 设置为 `HttpOnly` 和 `SameSite=Lax`。浏览器端所有 JSON 请求都会透传 Cookie，服务端会话在 `make run` 进程生命周期内保持。
 
 ## 新闻源接入
 

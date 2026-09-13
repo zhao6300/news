@@ -6,7 +6,7 @@ const searchInput = document.querySelector("#search-input");
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
-    credentials: "same-origin",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     ...options,
   });
@@ -72,13 +72,13 @@ function renderError(error) {
   view.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
 }
 
-function renderHome(bootstrap, sources) {
+function renderHome(bootstrap, sources, articles) {
   const sourceCards = sources.map((source) => `
     <a class="card source-card" href="/extensions/${escapeHtml(source.slug)}">
       <strong><span>${escapeHtml(source.label)}</span><span>${source.article_count}</span></strong>
       <span>${(source.categories || []).map((category) => escapeHtml(category.label)).join(" · ") || "全部内容"}</span>
     </a>`).join("");
-  const articleCards = bootstrap.items.map(articleCard).join("");
+  const articleCards = articles.items.map(articleCard).join("");
   view.innerHTML = `
     <h1 class="page-heading">AI 信息平台</h1>
     <p class="page-meta">按来源快速浏览新闻、技术、模型和评测内容。</p>
@@ -260,7 +260,7 @@ async function route() {
     if (path === "/") {
       const sources = await api("/api/sources");
       const articles = await api("/api/articles");
-      renderHome(articles, sources.sources);
+      renderHome(bootstrap, sources.sources, articles);
       return;
     }
 
