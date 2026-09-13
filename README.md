@@ -25,6 +25,8 @@ make test
 make run
 ```
 
+For faster verification, run the focused layers separately with `make unit` and `make integration`.
+
 Set `PLATFORM_DB` to a writable SQLite file to preserve article state across restarts. Without the variable, the starter uses in-memory seeded data.
 
 Override the placeholder account with `PLATFORM_ACCOUNT_EMAIL` and `PLATFORM_ACCOUNT_PASSWORD`. If either variable is missing, the platform fails to start rather than silently using a partial account.
