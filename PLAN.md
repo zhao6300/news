@@ -214,3 +214,17 @@ Acceptance:
 - Static loader blocks paths outside `frontend/`.
 - The same category, article, search, and source data remain protected by CLI-backed service methods.
 - There is no npm/Node/Vite/React build dependency; the front end uses standard browser platform APIs.
+
+## Phase 22 — Editorial UI Refinement
+
+Scope: align the separated UI with mainstream news patterns while keeping it a static shell and
+JSON-only backend. Prioritize clear typography, stable category navigation, article-first hierarchy,
+responsive cards, and calm neutral tokens.
+
+Acceptance:
+
+- The page shell uses a compact masthead, rounded search, and horizontally scrollable categories.
+- Article cards show a semantic layout with title, summary, tags, date/source/category, and read link.
+- Login and account views avoid distraction and keep localized copy.
+- Light and dark schemes use consistent color, spacing, radius, and hover cues.
+- No build tool or new dependency is introduced.

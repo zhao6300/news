@@ -34,12 +34,21 @@ function categoryLabel(slug) {
 function articleCard(article) {
   const tags = article.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   return `
-    <a class="card" href="/article/${article.id}">
-      <h3>${escapeHtml(article.title)}</h3>
+    <article class="news-card">
+      <a href="/article/${article.id}">
+        <h3>${escapeHtml(article.title)}</h3>
+      </a>
       <p>${escapeHtml(article.summary)}</p>
       <div class="tag-list">${tags}</div>
-      <span class="card-meta">${escapeHtml(article.published_at.split("T", 1)[0])} · ${escapeHtml(article.source)} · ${escapeHtml(categoryLabel(article.category))}</span>
-    </a>`;
+      <footer>
+        <span class="card-meta">
+          <span class="date">${escapeHtml(article.published_at.split("T", 1)[0])}</span>
+          <strong>${escapeHtml(article.source)}</strong>
+          <span>${escapeHtml(categoryLabel(article.category))}</span>
+        </span>
+        <a class="read-more" href="/article/${article.id}">阅读全文</a>
+      </footer>
+    </article>`;
 }
 
 function escapeHtml(value) {
