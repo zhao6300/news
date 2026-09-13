@@ -6,7 +6,7 @@ A phased build for a modular AI information platform covering news, technology, 
 
 - `src/app.py` — browser routes and HTML rendering.
 - `src/auth.py` — account-model login flow.
-- `src/connectors.py` — extension protocol for new information sources.
+- `src/connectors.py` — extension protocol, connector registry, and ingestion diagnostics.
 - `src/extensions/builtin.py` — seeded content for the initial platform schema.
 - `src/services.py` — service-layer access to extensions.
 - `src/sessions.py` — login session store.
@@ -59,5 +59,5 @@ Pagination supports `?page=` and `?page_size=1..50`.
 
 ## Known next steps
 
-1. Add source scheduling and ingestion diagnostics.
+1. Connect the ingestion scheduler to startup and expose a diagnostics endpoint.
 2. Add category filters, article result counts, and richer search.
