@@ -10,7 +10,7 @@ from app import (
     _account_profile_key_for_web,
     _path_segments,
 )
-from auth import Account
+from auth import Account, Address, Registration
 
 
 def test_signed_and_unsigned_account_paths_normalize():
@@ -26,7 +26,14 @@ def test_account_profile_key_conceals_owner_email():
 
 
 def test_owner_and_api_profile_resolvers_share_signature_rules():
-    owner = Account(1, "owner@example.com", "hash", "salt")
+    owner = Account(
+        1,
+        "owner@example.com",
+        "hash",
+        "salt",
+        address=Address(),
+        profile=Registration("standard", "standard"),
+    )
 
     assert _account_profile_key_for_web(owner, "verification-key") == _account_profile_key("verification-key")
     assert (
@@ -43,7 +50,14 @@ def test_owner_and_api_profile_resolvers_share_signature_rules():
 
 
 def test_account_route_verification_rejects_missing_headers():
-    owner = Account(1, "owner@example.com", "hash", "salt")
+    owner = Account(
+        1,
+        "owner@example.com",
+        "hash",
+        "salt",
+        address=Address(),
+        profile=Registration("standard", "standard"),
+    )
 
     assert _account_profile_key_for_web(object(), "") is None
     with pytest.raises(KeyError):

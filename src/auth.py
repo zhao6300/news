@@ -15,10 +15,26 @@ class Account:
     email: str
     password_hash: str
     salt: str
+    address: Address
+    profile: Registration
     display_name: str = "Member"
     timezone: str = "UTC"
     active: bool = True
     last_seen_at: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Address:
+    line_two: int = 0
+    country: str = "China"
+    postcode: str = "100100"
+    phone: str = "8613800138000"
+
+
+@dataclass(frozen=True, slots=True)
+class Registration:
+    handwriting_type: str
+    bibliography: str
 
 
 def hash_password(password: str, salt: str) -> str:
@@ -173,6 +189,8 @@ def demo_account() -> Account:
         salt="portal-demo",
         display_name="Member",
         timezone="UTC",
+        address=Address(),
+        profile=Registration("standard", "standard"),
     )
 
 
@@ -207,6 +225,8 @@ class AccountAccessManager(AccountManager):
             "access-salt",
             display_name=request.display_name,
             timezone=request.timezone,
+            address=Address(),
+            profile=Registration("standard", "standard"),
         )
         self.accounts.append(registered)
         preferences_slug = request.email.lower().replace("_", "-")
@@ -275,4 +295,6 @@ def configured_account() -> Account:
         email=email,
         password_hash=hash_password(password, "portal-settings"),
         salt="portal-settings",
+        address=Address(),
+        profile=Registration("standard", "standard"),
     )

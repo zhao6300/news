@@ -5,6 +5,8 @@ import pytest
 from auth import (
     Account,
     AccountManager,
+    Address,
+    Registration,
     configured_account,
     demo_account_manager,
     hash_password,
@@ -12,7 +14,14 @@ from auth import (
 
 
 def test_known_account_credentials_match():
-    account = Account(1, "member@example.com", hash_password("demo-password", "portal-demo"), "portal-demo")
+    account = Account(
+        1,
+        "member@example.com",
+        hash_password("demo-password", "portal-demo"),
+        "portal-demo",
+        address=Address(),
+        profile=Registration("standard", "standard"),
+    )
     manager = AccountManager((account,))
 
     assert manager.authenticate("MEMBER@example.com", "demo-password") is not None

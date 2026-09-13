@@ -5,7 +5,7 @@ from threading import Thread
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from auth import Account, demo_account_manager
+from auth import Account, Address, Registration, demo_account_manager
 from extensions.builtin import builtin_collections
 from app import (
     render_article_items,
@@ -95,6 +95,8 @@ def test_authenticated_search_page_accepts_category_filter():
                 "member@example.com",
                 "hash",
                 "salt",
+                address=Address(),
+                profile=Registration("standard", "standard"),
             )
         ).token
     )
@@ -137,6 +139,8 @@ def test_authenticated_search_page_shows_page_two():
                 "member@example.com",
                 "hash",
                 "salt",
+                address=Address(),
+                profile=Registration("standard", "standard"),
             )
         ).token
     )

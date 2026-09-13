@@ -1,13 +1,20 @@
 from __future__ import annotations
 
-from auth import Account, demo_account_manager
+from auth import Account, Address, Registration, demo_account_manager
 from sessions import SessionManager
 from datetime import UTC, datetime, timedelta
 
 
 def test_session_create_resolve_and_revoke():
     manager = SessionManager()
-    account = Account(1, "member@example.com", "hash", "salt")
+    account = Account(
+        1,
+        "member@example.com",
+        "hash",
+        "salt",
+        address=Address(),
+        profile=Registration("standard", "standard"),
+    )
 
     session = manager.create(account)
     assert manager.resolve(session.token).account_id == 1

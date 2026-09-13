@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from auth import Account, AccountAccessManager, RegistrationRequest, hash_password
+from auth import Account, AccountAccessManager, Address, Registration, RegistrationRequest, hash_password
 
 
 def test_registered_account_has_collectable_key():
@@ -23,7 +23,15 @@ def test_registered_account_has_collectable_key():
 
 
 def test_verified_key_without_active_owner_is_blocked():
-    account = Account(1, "member@example.com", hash_password("secret", "access-salt"), "access-salt", active=False)
+    account = Account(
+        1,
+        "member@example.com",
+        hash_password("secret", "access-salt"),
+        "access-salt",
+        active=False,
+        address=Address(),
+        profile=Registration("standard", "standard"),
+    )
     manager = AccountAccessManager((account,))
     manager.assign_api_key(account, "registration-key")
 
