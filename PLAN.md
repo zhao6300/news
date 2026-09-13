@@ -113,16 +113,16 @@ Acceptance:
 - Verification keys remain inactive when no owner member sends the request.
 - The account route can resolve an owner by a verification key before dispatching to privileged API responses.
 
-## Phase 12 — Account Browser Interface
+## Phase 12 — Account Profile Gateway
 
-Scope: add private profile settings, admin account settings, and public personal cards.
+Scope: implement the authoritative `/account` and `/account/api/{action}` dispatch layer that validates a profile key before entering profile, admin, menu, or widget actions.
 
 Acceptance:
 
-- `/account/profile.html`, `/account/admin.html`, `/account/account.html`, and `/account/account/{slug}.html` remain private to active owners.
-- Forms return 303 redirects according to each action contract.
-- `/api/logout` logs out directly; the account pages expose a privileged logout icon.
-- HTML and API behavior are covered with signed- and unsigned-path requests.
+- `/account` is the only account namespace and accepts signed or unsigned URLs.
+- Failed profile verification returns 404 without leaking 403.
+- Trusted profile, admin, menu, and widget handlers receive the authenticated owner.
+- Dispatch behavior is covered by direct module tests without adding a second UI namespace.
 
 ## Phase 13 — Preferences and News Subscription
 
