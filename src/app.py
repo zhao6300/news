@@ -382,6 +382,20 @@ class PortalHandler(BaseHTTPRequestHandler):
         except ValueError:
             raise KeyError(text) from None
 
+    def pagination_parameters(
+        self,
+        query: dict[str, list[str]],
+        *,
+        max_page_size: int,
+    ) -> tuple[int, int]:
+        try:
+            page = max(1, int(query.get("page", ["1"])[0]))
+            page_size_value = int(query.get("page_size", ["10"])[0])
+        except (TypeError, ValueError):
+            raise ValueError("Pagination parameters must be integers.") from None
+        page_size = min(max_page_size, max(1, page_size_value))
+        return page, page_size
+
     def is_authenticated(self, path: str) -> bool:
         return path in {"/login", "/health", "/api/ingestion"} or self.current_session() is not None
 
@@ -435,8 +449,11 @@ class PortalHandler(BaseHTTPRequestHandler):
             return
         parsed = urlparse(self.path)
         query = parse_qs(parsed.query)
-        page = max(1, int(query.get("page", ["1"])[0]))
-        page_size = min(50, max(1, int(query.get("page_size", ["10"])[0])))
+        try:
+            page, page_size = self.pagination_parameters(query, max_page_size=50)
+        except ValueError:
+            self.show_not_found()
+            return
         result = self.service.list_articles(category, page=page, page_size=page_size)
         article_rows = render_article_items(result.items)
         pagination = self.render_pagination(page, page_size, result.total)
@@ -528,8 +545,11 @@ class PortalHandler(BaseHTTPRequestHandler):
         except KeyError:
             self.show_not_found()
             return
-        page = max(1, int(query.get("page", ["1"])[0]))
-        page_size = min(100, max(1, int(query.get("page_size", ["10"])[0])))
+        try:
+            page, page_size = self.pagination_parameters(query, max_page_size=100)
+        except ValueError:
+            self.show_not_found()
+            return
         result = self.search_engine.search(
             text,
             category=category,
@@ -588,8 +608,11 @@ class PortalHandler(BaseHTTPRequestHandler):
         except KeyError:
             self.show_not_found()
             return
-        page_size = min(50, max(1, int(query.get("page_size", ["10"])[0])))
-        page = max(1, int(query.get("page", ["1"])[0]))
+        try:
+            page, page_size = self.pagination_parameters(query, max_page_size=50)
+        except ValueError:
+            self.show_not_found()
+            return
         result = self.search_engine.search(
             text,
             category=category,

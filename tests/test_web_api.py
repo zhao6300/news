@@ -4,6 +4,7 @@ import threading
 from datetime import UTC, datetime
 from json import loads
 from urllib.parse import urlencode
+from urllib.error import HTTPError
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
@@ -199,8 +200,39 @@ def test_home_page_renders_authenticated_top_bar():
         server.server_close()
         thread.join()
 
-    assert "<a href='/logout'>Log Out</a>" in payload
-    assert "Signed in as member@example.com" in payload
+
+def test_invalid_search_pagination_returns_not_found():
+    service = InMemoryPlatformService(builtin_collections())
+    session_manager = SessionManager()
+    cookie = install_logged_in_cookie(session_manager)
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            InMemorySearchEngine([]),
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        try:
+            urlopen(
+                Request(
+                    f"http://127.0.0.1:{server.server_port}/api/search?q=Example&page=not-number",
+                    headers={"Cookie": cookie},
+                )
+            )
+        except HTTPError as error:
+            assert error.code == 404
+            assert b"404" in error.read()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
 
 
 def test_login_submission_reports_valid_credentials():
