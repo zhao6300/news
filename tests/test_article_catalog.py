@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from datetime import UTC, datetime
 
 from extensions.builtin import builtin_collections
@@ -50,3 +52,15 @@ def test_article_record_repository_preserves_article_fields():
     assert article.category_id == CategoryGroup.MODELS
     assert article.tags == ("Model", "Evaluation")
     assert article.published_at == datetime(2026, 2, 1, 9, tzinfo=UTC)
+
+
+def test_capped_page_size_rejects_invalid_pagination():
+    service = InMemoryPlatformService(builtin_collections())
+    service.repository = InMemoryRepositoryLayer()
+
+    with pytest.raises(ValueError, match="Page must be positive"):
+        service.list_articles(CategoryGroup.TECH, page=0)
+    with pytest.raises(ValueError, match="Page size must be positive"):
+        service.list_articles(CategoryGroup.TECH, page_size=0)
+    with pytest.raises(ValueError, match="not exceed 50"):
+        service.list_articles(CategoryGroup.TECH, page_size=51)

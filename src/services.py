@@ -42,6 +42,12 @@ class InMemoryPlatformService(PlatformServiceInterface):
     def list_articles(self, category: CategoryGroup, page: int = 1, page_size: int = 10) -> Page:
         if self.repository is None:
             raise RuntimeError("A repository has not been attached to the service.")
+        if page < 1:
+            raise ValueError("Page must be positive.")
+        if page_size < 1:
+            raise ValueError("Page size must be positive.")
+        if page_size > 50:
+            raise ValueError("Page size must not exceed 50.")
         return self.repository.list_page(category, page=page, page_size=page_size)
 
     def get_article(self, article_id: int) -> Article:
