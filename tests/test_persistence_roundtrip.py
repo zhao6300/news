@@ -10,7 +10,7 @@ from sqlite_store import SQLiteArticleLayer
 
 @pytest.mark.parametrize("category", [CategoryGroup.TECH, CategoryGroup.AI])
 def test_category_supports_storage_and_pagination(category):
-    repository = SQLiteArticleLayer()
+    repository = SQLiteArticleLayer("portal.db")
     article = Article(
         id=17,
         title="Example",
