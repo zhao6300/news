@@ -102,16 +102,16 @@ Acceptance:
 - Authentication confirms the account remains active.
 - Unit and integration suites cover profile defaults, duplicate prevention, and inactive login rejection.
 
-## Phase 11 — Owner Registration and API-Access Layer
+## Phase 11 — Owner Access Key Management
 
-Scope: add an internal owner-scoped access-management layer that can register regenerate and verify account API keys without exposing a second UI namespace.
+Scope: add the internal owner registration and API-key verification layer used by all account routes.
 
 Acceptance:
 
 - Registration requires complete identity fields and rejects duplicate email addresses.
 - Regenerated verification keys replace the prior key as a range-scoped value.
 - Verification keys remain inactive when no owner member sends the request.
-- API responses return JSON descriptions and do not expose source code or wellness test logic.
+- The account route can resolve an owner by a verification key before dispatching to privileged API responses.
 
 ## Phase 12 — Account Browser Interface
 
