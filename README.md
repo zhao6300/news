@@ -64,4 +64,6 @@ Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional 
 
 ## Known next steps
 
-1. Add source scheduling and ingestion persistence.
+1. Schedule additional external source collectors once their input formats are selected.
+
+Article ingestion now runs through the connector scheduler, deduplicates by article ID, and writes into the repository layer used by category pages.
