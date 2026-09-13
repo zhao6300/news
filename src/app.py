@@ -17,6 +17,7 @@ from auth import (
     resolve_authenticated_account,
 )
 from connectors import IngestionReport
+from connectors import RuntimeSourceManager
 from services import InMemoryPlatformService
 from sessions import SessionManager
 from searchers import SearchEngine
@@ -440,6 +441,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         *args: object,
         public_root: Path | None = None,
         ingestion_reports: Sequence[IngestionReport] = (),
+        source_manager: RuntimeSourceManager | None = None,
         **kwargs: object,
     ) -> None:
         self.service = service
@@ -448,6 +450,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.search_engine = search_engine
         self.ingestion_reports = list(ingestion_reports)
         self.public_root = public_root if public_root is not None else Path(__file__).resolve().parent.parent / "frontend"
+        self.source_manager = source_manager
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
@@ -516,6 +519,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.handle_login()
         elif path == "/api/logout":
             self.handle_logout()
+        elif path == "/api/sources":
+            self.handle_add_source_api()
         else:
             self.show_not_found()
 
@@ -937,6 +942,57 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.end_headers()
         self.wfile.write(dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+    def handle_add_source_api(self) -> None:
+        if self.current_account() is None:
+            self.send_json_response(
+                {"message": "请先登录。", "status": "failed"}, status=401
+            )
+            return
+        if self.source_manager is None:
+            self.send_json_response(
+                {"message": "来源管理功能未启用。", "status": "failed"}, status=503
+            )
+            return
+        try:
+            raw_body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        except ValueError:
+            self.send_json_response({"message": "来源数据必须是 JSON 对象。", "status": "failed"}, status=400)
+            return
+        try:
+            payload = loads(raw_body.decode("utf-8")) if raw_body else {}
+        except (UnicodeDecodeError, ValueError):
+            self.send_json_response({"message": "来源数据必须是 JSON 对象。", "status": "failed"}, status=400)
+            return
+        if not isinstance(payload, dict):
+            self.send_json_response(
+                {"message": "来源数据必须是 JSON 对象。", "status": "failed"}, status=400
+            )
+            return
+        try:
+            result = self.source_manager.add_source(payload)
+        except ValueError as error:
+            self.send_json_response({"message": str(error), "status": "failed"}, status=400)
+            return
+        category_label_text = category_label(result.registration.category_id)
+        self.send_json_response(
+            {
+                "status": "created",
+                "article_count": result.article_count,
+                "source": {
+                    "slug": result.registration.slug,
+                    "label": result.registration.label,
+                    "url": f"/extensions/{result.registration.slug}",
+                    "category": {"slug": result.registration.category_id.value, "label": category_label_text},
+                    "article_count": result.article_count,
+                    "ingestion": {
+                        "status": "ok" if result.report.succeeded else "failed",
+                        "item_count": result.report.item_count,
+                        "error": result.report.error,
+                    },
+                },
+            }
+        )
 
     def handle_search_page(self) -> None:
         query = parse_qs(urlparse(self.path).query)

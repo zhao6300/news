@@ -99,7 +99,28 @@ make run
 
 ## 新闻源接入
 
-平台内置统一的来源连接器协议。内置扩展已注册为 `builtin`。RSS 2.0 来源通过 `PLATFORM_FEEDS` 配置：
+平台内置统一的来源连接器协议。内置扩展已注册为 `builtin`。运行过程中可以登录后在 `/sources` 页面添加 RSS 2.0 信息源，
+也可以通过 `PLATFORM_FEEDS` 在启动前配置固定来源。
+
+登录后的手动添加只使用中文表单，字段如下：
+
+1. `来源名称`：1 到 60 个字符。
+2. `信息分类`：`ai`、`news`、`tech`、`models` 或 `reviews`。
+3. `信息源地址`：HTTP 或 HTTPS 的 RSS 2.0 地址。
+4. `每次拉取条数`：1 到 100。
+
+例如：
+
+```json
+{
+  "label": "科技研究源",
+  "category": "tech",
+  "feed_url": "https://example.com/rss.xml",
+  "limit": 20
+}
+```
+
+启动前配置的 RSS 2.0 来源通过 `PLATFORM_FEEDS` 设置：
 
 ```bash
 PLATFORM_FEEDS='[
@@ -138,6 +159,8 @@ make run
 - `timeout`：拉取超时时间，单位秒。
 
 RSS 连接器会根据文章 URL 生成稳定 ID。来源不可访问、格式错误或缺失必要字段时，该来源会在诊断接口中报告失败，不会让整个服务崩溃。
+
+运行时手动添加的来源默认仍保存在当前进程内存中；如果需要长期保存，请使用 `PLATFORM_FEEDS` 配置或等待后续持久化阶段。
 
 ## 来源诊断
 

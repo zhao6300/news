@@ -10,6 +10,8 @@ from collections.abc import Callable
 from urllib.parse import urlsplit
 from xml.etree import ElementTree
 
+from re import fullmatch, sub
+
 from models import TextEntry
 from scaffold import Article, CategoryGroup, PlatformExtension
 
@@ -129,6 +131,127 @@ class ArticleIngestionScheduler:
         if existing == article:
             return
         self.repository.update(article)
+
+
+@dataclass(frozen=True, slots=True)
+class RssSourceRegistration:
+    slug: str
+    label: str
+    category_id: CategoryGroup
+    feed_url: str
+    limit: int | None = None
+    timeout: int = 10
+
+    @classmethod
+    def parse(cls, payload: dict[str, object]) -> "RssSourceRegistration":
+        label = str(payload.get("label", "")).strip()
+        if not 1 <= len(label) <= 60:
+            raise ValueError("来源名称长度必须是 1 到 60 个字符。")
+        slug_value = str(payload.get("slug", "")).strip()
+        slug = slug_value or sub(r"[^a-z0-9]+", "-", label.casefold()).strip("-")
+        slug = slug or "source"
+        slug = slug[:64]
+        if not fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?", slug):
+            raise ValueError("来源标识长度必须是 1 到 64 个字符。")
+        feed_url = str(payload.get("feed_url", "")).strip()
+        parsed_url = urlsplit(feed_url)
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError("来源地址必须是 HTTP 或 HTTPS 的有效链接。")
+        limit = payload.get("limit", 20)
+        timeout = payload.get("timeout", 10)
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+            raise ValueError("条目上限必须是 1 到 100 的整数。")
+        if isinstance(timeout, bool) or not isinstance(timeout, int) or not 1 <= timeout <= 30:
+            raise ValueError("拉取超时必须是 1 到 30 的整数。")
+        try:
+            category_id = CategoryGroup(str(payload.get("category", "")).strip())
+        except ValueError as error:
+            raise ValueError("信息分类必须是可用分类。") from error
+        return cls(slug=slug, label=label, category_id=category_id, feed_url=feed_url, limit=limit, timeout=timeout)
+
+
+@dataclass(frozen=True, slots=True)
+class SourceAdditionResult:
+    registration: RssSourceRegistration
+    report: IngestionReport
+    article_count: int
+
+
+class RuntimeSourceManager:
+    def __init__(
+        self,
+        repository: object,
+        service: object,
+        search_engine: object,
+        reports: list[IngestionReport],
+        *,
+        fetcher: Callable[[str, int], str],
+    ) -> None:
+        self.repository = repository
+        self.service = service
+        self.search_engine = search_engine
+        self.reports = reports
+        self.fetcher = fetcher
+        self._registrations: dict[str, RssSourceRegistration] = {}
+
+    @classmethod
+    def _linked_source(
+        cls,
+        registration: RssSourceRegistration,
+        articles: Sequence[Article],
+    ) -> tuple[PlatformExtension, BuiltinArticleConnector, SourceJob[Article]]:
+        extension = PlatformExtension(
+            slug=registration.slug,
+            label=registration.label,
+            entries=[
+                article for article in articles if article.source == registration.label
+            ],
+        )
+        connector = BuiltinArticleConnector(registration.slug, registration.label, extension.entries)
+        return extension, connector, connector.source_job
+
+    @classmethod
+    def _registration_key(cls, registration: RssSourceRegistration) -> tuple[str, str]:
+        return registration.slug.casefold(), registration.label.casefold()
+
+    def _source_fetcher(self, timeout: int) -> Callable[[str], str]:
+        return lambda feed_url: self.fetcher(feed_url, timeout)
+
+    def add_source(
+        self,
+        payload: dict[str, object],
+    ) -> SourceAdditionResult:
+        registration = RssSourceRegistration.parse(payload)
+        if self._registration_key(registration) in {
+            self._registration_key(existing) for existing in self._registrations.values()
+        }:
+            raise ValueError("来源标识已存在。")
+        connector = RssItemConnector(
+            registration.slug,
+            registration.label,
+            registration.category_id,
+            feed_url=registration.feed_url,
+            fetcher=self._source_fetcher(registration.timeout),
+            limit=registration.limit,
+        )
+        report = ArticleIngestionScheduler((connector.source_job,), self.repository).run()[0]
+        if not report.succeeded:
+            self.reports.append(report)
+            raise ValueError(report.error or "来源暂不可用。")
+        articles = list(self.repository.all())
+        extension, connector, source_job = self._linked_source(registration, articles)
+        self.search_engine.refresh_articles(articles)
+        self.service.extensions.append(extension)
+        self._registrations[registration.slug] = registration
+        self.reports.append(IngestionReport(registration.slug, registration.label, report.item_count))
+        return SourceAdditionResult(
+            registration=registration,
+            report=report,
+            article_count=len(extension.entries),
+        )
+
+    def get_source(self, slug: str) -> RssSourceRegistration:
+        return self._registrations[slug]
 
 
 class RssItemConnector:

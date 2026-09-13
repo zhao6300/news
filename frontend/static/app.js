@@ -121,16 +121,62 @@ function renderArticle(article) {
     </article>`;
 }
 
-function renderSources(sources) {
+function renderSources(sources, categories = []) {
+  const categoryOptions = categories
+    .map((category) => `<option value="${escapeHtml(category.slug)}">${escapeHtml(category.label)}</option>`)
+    .join("");
+  const form = `
+    <section class="source-form-card">
+      <h2 class="section-title">添加信息源</h2>
+      <p class="page-meta">填写来源名称、分类和 RSS 2.0 地址，提交后会立即读取最近内容。</p>
+      <form class="form source-form" id="source-form">
+        <label for="source-label">来源名称</label>
+        <input id="source-label" name="label" type="text" required maxlength="60" placeholder="例如：科技研究源">
+        <label for="source-category">信息分类</label>
+        <select id="source-category" name="category" required>${categoryOptions}</select>
+        <label for="source-url">信息源地址</label>
+        <input id="source-url" name="feed_url" type="url" required placeholder="https://example.com/rss.xml">
+        <label for="source-limit">每次拉取条数</label>
+        <input id="source-limit" name="limit" type="number" min="1" max="100" value="20" required>
+        <p id="source-form-message" class="message" aria-live="polite"></p>
+        <button type="submit">添加</button>
+      </form>
+    </section>`;
   const cards = sources.map((source) => `
     <a class="card source-card" href="/extensions/${escapeHtml(source.slug)}">
       <h3 class="card-title">${escapeHtml(source.label)}</h3>
-      <div class="source-cat">${(source.categories || []).map((item) => `<span>${escapeHtml(item.label)}</span>`).join('<span class="source-cat-separator">·</span>')}<span>${source.article_count}</span></div>
+      <div class="source-cat">
+        <span>${(source.categories || []).map((item) => escapeHtml(item.label)).join(" · ") || "全部内容"}</span>
+        <span>${escapeHtml(source.article_count)}</span>
+      </div>
     </a>`).join("");
   view.innerHTML = `
     <h1 class="page-heading">内容来源</h1>
     <p class="page-meta">包含内置来源和已配置的 RSS 连接器。</p>
+    ${form}
     <div class="content-grid two">${cards || '<p class="empty">暂无来源</p>'}</div>`;
+  document.querySelector("#source-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const message = document.querySelector("#source-form-message");
+    try {
+      await api("/api/sources", {
+        method: "POST",
+        body: JSON.stringify({
+          label: formData.get("label"),
+          category: formData.get("category"),
+          feed_url: formData.get("feed_url"),
+          limit: Number(formData.get("limit")),
+        }),
+      });
+      await route();
+    } catch (error) {
+      if (message) {
+        message.textContent = error.message;
+        message.className = "message error";
+      }
+    }
+  });
 }
 
 function renderExtension(extension) {
@@ -248,7 +294,8 @@ async function route() {
     }
 
     if (path === "/sources") {
-      renderSources(bootstrap.sources || []);
+      const sources = await api("/api/sources");
+      renderSources(sources.sources || [], bootstrap.categories);
       return;
     }
 

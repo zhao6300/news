@@ -23,6 +23,9 @@ class InMemorySearchEngine(SearchEngine):
     def __init__(self, articles: Sequence[Article]) -> None:
         self.articles = list(articles)
 
+    def refresh_articles(self, articles: Sequence[Article]) -> None:
+        self.articles = list(articles)
+
     def search(self, query, category=None, source=None, page=1, page_size=10) -> Page:
         normalized = query.lower()
         words = [word for word in normalized.replace("　", " ").split(" ") if word]

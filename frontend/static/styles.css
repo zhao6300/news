@@ -131,6 +131,14 @@ main.page {
 .source-card { gap: .55rem; }
 .source-card .source-cat { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; color: var(--muted); font-size: .88rem; }
 .source-card .source-cat-separator { opacity: .42; }
+.source-form-card {
+  max-width: 56rem; margin: 1.2rem 0; padding: 1.2rem;
+  border: 1px solid var(--edge); border-radius: var(--radius);
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.source-form-card .form { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.source-form-card .message { margin-top: .4rem; }
+.source-form-card button { grid-column: 1 / -1; justify-self: start; }
 
 .login-panel, .form-panel { max-width: 26rem; margin: 3.2rem auto 0; background: var(--surface); border: 1px solid var(--edge); border-radius: 1.35rem; padding: 1.65rem; box-shadow: var(--shadow); }
 .form-panel h1 { margin-top: 0; }

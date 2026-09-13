@@ -25,6 +25,9 @@ from auth import AccountManager, demo_account_manager, install_logged_in_cookie
 from auth import demo_account_manager as create_demo_account_manager
 from app import AccountSettingsHandler
 from connectors import IngestionReport
+from connectors import RuntimeSourceManager
+
+from tests.test_rss_connector import RSS_XML
 from sessions import SessionManager
 from searchers import InMemorySearchEngine
 from services import InMemoryPlatformService
@@ -279,6 +282,155 @@ def test_sources_api_reports_existing_connectors():
         assert source["article_count"] == 6
         assert source["ingestion"]["status"] == "ok"
         assert source["ingestion"]["item_count"] == 6
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_sources_api_adds_linked_source_to_service():
+    service = InMemoryPlatformService(builtin_collections())
+    service.repository = InMemoryRepositoryLayer()
+    search_engine = InMemorySearchEngine([])
+    reports = []
+    source_manager = RuntimeSourceManager(
+        service.repository,
+        service,
+        search_engine,
+        reports,
+        fetcher=lambda feed_url, timeout: RSS_XML,
+    )
+    session_manager = SessionManager()
+    cookie = install_logged_in_cookie(session_manager)
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            search_engine,
+            ingestion_reports=reports,
+            source_manager=source_manager,
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        request = Request(
+            f"http://127.0.0.1:{server.server_port}/api/sources",
+            data=dumps(
+                {
+                    "label": "研究来源",
+                    "category": "models",
+                    "feed_url": "https://example.com/research.xml",
+                    "limit": 1,
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Cookie": cookie},
+            method="POST",
+        )
+        with urlopen(request) as response:
+            assert response.status == 200
+            payload = loads(response.read().decode("utf-8"))
+        assert payload["status"] == "created"
+        assert payload["article_count"] == 1
+        assert payload["source"]["slug"] == "source"
+        assert payload["source"]["label"] == "研究来源"
+        assert payload["source"]["ingestion"]["status"] == "ok"
+
+        with urlopen(Request(f"http://127.0.0.1:{server.server_port}/api/sources", headers={"Cookie": cookie})) as response:
+            payload = loads(response.read().decode("utf-8"))
+        assert [source["slug"] for source in payload["sources"]] == ["builtin", "source"]
+        assert payload["sources"][1]["label"] == "研究来源"
+        assert payload["sources"][1]["slug"] == "source"
+        assert payload["sources"][1]["ingestion"]["item_count"] == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_sources_api_rejects_missing_fields():
+    service = InMemoryPlatformService(builtin_collections())
+    service.repository = InMemoryRepositoryLayer()
+    source_manager = RuntimeSourceManager(
+        service.repository,
+        service,
+        InMemorySearchEngine([]),
+        [],
+        fetcher=lambda feed_url, timeout: RSS_XML,
+    )
+    session_manager = SessionManager()
+    cookie = install_logged_in_cookie(session_manager)
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            InMemorySearchEngine([]),
+            ingestion_reports=[],
+            source_manager=source_manager,
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        request = Request(
+            f"http://127.0.0.1:{server.server_port}/api/sources",
+            data=dumps({}).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Cookie": cookie},
+            method="POST",
+        )
+        with pytest.raises(HTTPError) as error:
+            urlopen(request)
+        assert error.value.code == 400
+        payload = loads(error.value.read().decode("utf-8"))
+        assert payload["message"] == "来源名称长度必须是 1 到 60 个字符。"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_sources_api_add_action_requires_login():
+    source_manager = RuntimeSourceManager(
+        InMemoryRepositoryLayer(),
+        InMemoryPlatformService(()),
+        InMemorySearchEngine([]),
+        [],
+        fetcher=lambda feed_url, timeout: RSS_XML,
+    )
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            InMemoryPlatformService(builtin_collections()),
+            AccountManager(()),
+            SessionManager(),
+            InMemorySearchEngine([]),
+            ingestion_reports=[],
+            source_manager=source_manager,
+            *args,
+            **kwargs,
+        ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        request = Request(
+            f"http://127.0.0.1:{server.server_port}/api/sources",
+            data=dumps({"label": "研究", "category": "tech", "feed_url": "https://example.com/feed"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with pytest.raises(HTTPError) as error:
+            urlopen(request)
+        assert error.value.code == 401
+        assert loads(error.value.read().decode("utf-8"))["message"] == "请先登录。"
     finally:
         server.shutdown()
         server.server_close()

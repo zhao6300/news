@@ -126,6 +126,14 @@ def main() -> None:
     public_root = Path(__file__).resolve().parent.parent / "frontend"
     account_manager = AccountManager((configured_account(),))
     session_manager = SessionManager()
+    runtime_reports = list(ingestion_reports)
+    source_manager = RuntimeSourceManager(
+        repository,
+        service,
+        search_engine,
+        runtime_reports,
+        fetcher=read_feed,
+    )
 
     def handler(request: object, client_address: object, http_server: object):
         return PortalHandler(
@@ -137,7 +145,8 @@ def main() -> None:
             client_address,
             http_server,
             public_root=public_root,
-            ingestion_reports=ingestion_reports,
+            ingestion_reports=runtime_reports,
+            source_manager=source_manager,
         )
 
     server = ThreadingHTTPServer((host, port), handler)
