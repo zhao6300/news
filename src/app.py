@@ -226,6 +226,15 @@ def render_article_tags(article: Article) -> str:
     return f"<div class='tag-list'>{tags}</div>"
 
 
+def render_article_page(article: Article) -> str:
+    return f"""<article><h1>{escape(article.title)}</h1>
+<p class='page-meta'>{escape(article.published_at_display)} · {escape(article.source)} · {escape(category_label(article.category_id))}</p>
+<p>{escape(article.summary)}</p>
+{render_article_tags(article)}
+<p class='actions'><a href='{escape(article.url)}'>Read source</a></p>
+</article>"""
+
+
 def render_html_page(
     title: str,
     body: str,
@@ -474,12 +483,7 @@ class PortalHandler(BaseHTTPRequestHandler):
             return
         html_content = render_html_page(
             article.title,
-            f"""<article><h1>{escape(article.title)}</h1>
-<p class='page-meta'>{escape(article.source)} · {escape(category_label(article.category_id))}</p>
-<p>{escape(article.summary)}</p>
-{render_article_tags(article)}
-<p class='actions'><a href='{escape(article.url)}'>Read source</a></p>
-</article>""",
+            render_article_page(article),
         )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")

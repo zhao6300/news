@@ -7,7 +7,12 @@ from urllib.request import Request, urlopen
 
 from auth import Account, demo_account_manager
 from extensions.builtin import builtin_collections
-from app import render_article_items, render_search_results, render_article_tags
+from app import (
+    render_article_items,
+    render_search_results,
+    render_article_tags,
+    render_article_page,
+)
 from app import render_search_pagination
 from storage import Page
 from scaffold import Article, CategoryGroup
@@ -60,6 +65,15 @@ def test_article_tags_render_individually():
     html = render_article_tags(article)
 
     assert "<span class='tag'>technology</span>" in html
+
+
+def test_article_detail_shows_publish_date():
+    article = _article(1)
+
+    html = render_article_page(article)
+
+    assert "2026-01-01" in html
+    assert "Example · Tech" in html
 
 
 def test_article_items_render_collected_tags():
