@@ -1,9 +1,11 @@
+import os
+
 from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import demo_account_manager
 from scaffold import CategoryGroup
 from services import InMemoryPlatformService
-from http.server import HTTPServer
+from http.server import ThreadingHTTPServer
 
 
 def main() -> None:
@@ -13,6 +15,12 @@ def main() -> None:
     print(f"Loaded {len(extensions[0].entries)} articles across {len(CategoryGroup)} categories.")
 
     service = InMemoryPlatformService(extensions)
-    server = HTTPServer(("127.0.0.1", 8000), PortalHandler(service, demo_account_manager()))
-    print("Serving on http://127.0.0.1:8000")
+    host = os.getenv("PLATFORM_HOST", "127.0.0.1")
+    port = int(os.getenv("PLATFORM_PORT", "8000"))
+
+    def handler(*args: object, **kwargs: object):
+        return PortalHandler(service, demo_account_manager(), *args, **kwargs)
+
+    server = ThreadingHTTPServer((host, port), handler)
+    print(f"Serving on http://{host}:{port}")
     server.serve_forever()

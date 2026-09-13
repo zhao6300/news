@@ -37,6 +37,25 @@ def test_health_endpoint_is_api_reachable():
         thread.join()
 
 
+def test_home_page_is_served_by_runtime_handler():
+    service = InMemoryPlatformService(builtin_collections())
+    account_manager = AccountManager(())
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, *args, **kwargs),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urlopen(f"http://127.0.0.1:{server.server_port}/") as response:
+            assert response.status == 200
+            assert "News Intelligence Platform" in response.read().decode("utf-8")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
 def test_login_submission_reports_valid_credentials():
     service = InMemoryPlatformService(builtin_collections())
     account_manager = demo_account_manager()
