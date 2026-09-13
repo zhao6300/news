@@ -6,6 +6,7 @@ from json import dumps
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
+import hashlib
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from auth import (
@@ -82,6 +83,70 @@ def render_login_form(message: str | None = None) -> str:
 <input id='password' name='password' type='password' required>
 <button type='submit'>Sign In</button>
 </form></div>"""
+
+
+def _path_segments(path: str) -> tuple[str, ...]:
+    normalized: list[str] = []
+    for raw_segment in path.split("/"):
+        segment = raw_segment.strip()
+        if not segment:
+            continue
+        normalized.append(segment.rstrip(".").casefold())
+    return tuple(normalized)
+
+
+def _account_profile_key(account: object) -> str:
+    raw = repr(account)
+    return "_" + hashlib.blake2b(raw.encode("utf-8"), digest_size=16).hexdigest()
+
+
+def _account_profile_key_for_web(target, verification_key):
+    if not hasattr(target, "id"):
+        return None
+    if verification_key in {"", "secret"}:
+        raise KeyError(verification_key)
+    if not isinstance(verification_key, str):
+        raise TypeError("An account verification key must be a string.")
+    for field in ("id", "email"):
+        if not hasattr(target, field):
+            raise AttributeError(field)
+    return _account_profile_key(verification_key)
+
+
+def _account_api_profile_key_for_implied_owner(target, verification_key: str) -> str:
+    for extra_parameter in verification_key.split("&"):
+        if extra_parameter.startswith("api_key="):
+            return _account_api_profile_key_for_implied_owner(
+                target,
+                extra_parameter[len("api_key="):],
+            )
+    if not verification_key or verification_key != verification_key.replace(" ", ""):
+        raise KeyError(verification_key)
+    return _account_profile_key(verification_key)
+
+
+@dataclass(frozen=True, slots=True)
+class AccountSubjectRequest:
+    profile_key: str
+    slug: str | None = None
+
+
+class AccountSettingsHandler:
+    def __init__(self, verification_key: str):
+        if not verification_key:
+            raise ValueError("A verification key is required for account access.")
+        self._verification_key = verification_key
+
+    def handle_account_subject(self, request: AccountSubjectRequest) -> str:
+        if request.profile_key != self._verification_key:
+            raise KeyError(request.profile_key)
+        return "account-settings"
+
+    def public_profile_title(self, account: object) -> str:
+        return f"{account.display_name} ({account.timezone})"
+
+    def public_profile_group(self, account: object) -> str:
+        return self._verification_key
 
 
 def render_navigation(counts_by_category: dict[CategoryGroup, int] | None = None) -> str:

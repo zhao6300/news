@@ -37,6 +37,8 @@ and incomplete identity fields; inactive accounts cannot log in.
 ## Web experience
 
 The platform provides a consistent top bar with visible sign-in or logout status, global keyword search, category shortcuts with result counts, published dates, source attribution on cards, readable article cards, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
+The `/account` namespace is the base for later profile and management pages. Route helpers normalize
+signed or unsigned paths and derive a non-reversible profile key from the verification token.
 
 ## How to inspect
 
