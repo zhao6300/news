@@ -9,6 +9,7 @@ from app import PortalHandler
 from auth import AccountManager, configured_account
 from connectors import ArticleIngestionScheduler, ConnectorRegistry, RssItemConnector, SourceJob
 from connectors import IngestionReport
+from connectors import RuntimeSourceManager
 from sessions import SessionManager
 from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
