@@ -24,6 +24,17 @@ def builtin_collections() -> Sequence[PlatformExtension]:
             published_at=_published_at(date(2026, 1, 5)),
         ),
         Article(
+            id=5,
+            title="AI Industry News Roundup",
+            url="https://example.com/news",
+            summary="Daily coverage of releases, funding, policy, and research milestones.",
+            tags=("News", "AI", "Industry"),
+            source="Newsroom",
+            category_id=CategoryGroup.NEWS,
+            rank=1,
+            published_at=_published_at(date(2026, 9, 10)),
+        ),
+        Article(
             id=2,
             title="Technology Trends Digest",
             url="https://example.com/tech",

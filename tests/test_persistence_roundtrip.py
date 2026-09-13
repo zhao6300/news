@@ -17,4 +17,4 @@ def test_configured_persistence_survives_reopening(tmp_path):
     article = first_service.get_article(1)
     assert second_service.get_article(1) == article
     assert second_service.list_articles(article.category_id, page_size=10).total == 1
-    assert len(second_service.get_extension("builtin").entries) == 4
+    assert len(second_service.get_extension("builtin").entries) == 5

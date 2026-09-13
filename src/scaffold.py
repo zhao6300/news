@@ -38,7 +38,7 @@ class Article:
             summary=str(record["summary"]),
             tags=tuple(str(tag) for tag in record["tags"]),
             source=str(record["source"]),
-            category_id=int(record["category_id"]),
+            category_id=CategoryGroup(str(record["category_id"])),
             rank=int(record["rank"]),
             published_at=record["published_at"],
         )
