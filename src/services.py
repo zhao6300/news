@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from scaffold import PlatformExtension
+from scaffold import Article, CategoryGroup, PlatformExtension
+from storage import Page, RepositoryLayer
 
 
 class PlatformServiceInterface:
@@ -16,6 +17,7 @@ class PlatformServiceInterface:
 class InMemoryPlatformService(PlatformServiceInterface):
     def __init__(self, extensions: Sequence[PlatformExtension]) -> None:
         self.extensions = list(extensions)
+        self.repository: RepositoryLayer | None = None
 
     def get_extension(self, slug: str) -> PlatformExtension:
         for extension in self.extensions:
@@ -25,3 +27,25 @@ class InMemoryPlatformService(PlatformServiceInterface):
 
     def get_extensions(self) -> Sequence[PlatformExtension]:
         return self.extensions
+
+    @staticmethod
+    def get_category(slug: str) -> CategoryGroup:
+        try:
+            return CategoryGroup(slug)
+        except ValueError:
+            raise KeyError(slug) from None
+
+    @staticmethod
+    def list_article_categories() -> Sequence[CategoryGroup]:
+        return list(CategoryGroup)
+
+    def list_articles(self, category: CategoryGroup, page: int = 1, page_size: int = 10) -> Sequence[Article]:
+        if self.repository is None:
+            raise RuntimeError("A repository has not been attached to the service.")
+        result: Page = self.repository.list_page(category, page=page, page_size=page_size)
+        return result.items
+
+    def get_article(self, article_id: int) -> Article:
+        if self.repository is None:
+            raise RuntimeError("A repository has not been attached to the service.")
+        return self.repository.get(article_id)

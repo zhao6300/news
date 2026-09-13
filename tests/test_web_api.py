@@ -9,6 +9,7 @@ from extensions.builtin import builtin_collections
 from app import PortalHandler, render_extension_section
 from auth import AccountManager, demo_account_manager
 from services import InMemoryPlatformService
+from scaffold import CategoryGroup
 
 
 def test_extension_sections_are_rendered_through_service():
@@ -35,6 +36,12 @@ def test_health_endpoint_is_api_reachable():
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_category_page_is_resolved_through_service():
+    service = InMemoryPlatformService(builtin_collections())
+    assert service.get_category("ai") == CategoryGroup.AI
+    assert list(service.list_article_categories()) == list(CategoryGroup)
 
 
 def test_home_page_is_served_by_runtime_handler():

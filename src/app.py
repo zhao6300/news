@@ -67,6 +67,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.show_home_page()
         elif path.startswith("/extensions/"):
             self.show_extension_page(path.removeprefix("/extensions/"))
+        elif path.startswith("/category/"):
+            self.show_category_page(path.removeprefix("/category/"))
         elif path == "/health":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -107,6 +109,26 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.show_not_found()
             return
         html_content = render_html_page(extension.label, render_extension_section(extension))
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html_content.encode("utf-8"))
+
+    def show_category_page(self, slug: str) -> None:
+        try:
+            category = self.service.get_category(slug)
+        except KeyError:
+            self.show_not_found()
+            return
+        articles = self.service.list_articles(category)
+        article_rows = "".join(
+            f"<li><strong>{escape(article.title)}</strong><p>{escape(article.summary)}</p></li>"
+            for article in articles
+        )
+        html_content = render_html_page(
+            str(category),
+            f"<main><h1>{escape(str(category))}</h1><ul>{article_rows}</ul></main>",
+        )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
