@@ -31,7 +31,7 @@ Override the placeholder account with `PLATFORM_ACCOUNT_EMAIL` and `PLATFORM_ACC
 
 ## Web experience
 
-The platform provides a consistent top bar, global keyword search, category shortcuts with result counts, source attribution on cards, readable article cards, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
+The platform provides a consistent top bar, global keyword search, category shortcuts with result counts, published dates, source attribution on cards, readable article cards, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
 
 ## How to inspect
 

@@ -31,6 +31,7 @@ def test_article_items_render_semantic_cards_with_source_and_category():
     assert "/article/1" in html
     assert "Article 1" in html
     assert "Example · Tech" in html
+    assert "2026-01-01" in html
 
 
 def test_authenticated_search_page_accepts_category_filter():

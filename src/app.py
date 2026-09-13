@@ -24,7 +24,7 @@ def render_extension_section(extension: PlatformExtension) -> str:
         <article class='article-card'>
             <a href='/article/{entry.id}'><strong>{escape(entry.title)}</strong></a>
             <p>{escape(entry.summary)}</p>
-            <span class='meta'>{escape(entry.source)} · {escape(category_label(entry.category_id))}</span>
+            <span class='meta'>{escape(entry.published_at_display)} · {escape(entry.source)} · {escape(category_label(entry.category_id))}</span>
         </article>
         """
         for entry in extension.entries
@@ -47,7 +47,7 @@ def render_article_items(articles: Sequence[Article]) -> str:
         <article class='article-card'>
             <a href='/article/{article.id}'><strong>{escape(article.title)}</strong></a>
             <p>{escape(article.summary)}</p>
-            <span class='meta'>{escape(article.source)} · {escape(category_label(article.category_id))}</span>
+            <span class='meta'>{escape(article.published_at_display)} · {escape(article.source)} · {escape(category_label(article.category_id))}</span>
         </article>
         """
         for article in articles
