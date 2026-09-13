@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from html import escape
+from collections.abc import Sequence
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
@@ -9,6 +10,8 @@ from auth import AccountManager
 from services import InMemoryPlatformService
 from sessions import SessionManager
 from scaffold import PlatformExtension
+from scaffold import Article
+from scaffold import CategoryGroup
 
 
 def render_extension_section(extension: PlatformExtension) -> str:
@@ -17,6 +20,10 @@ def render_extension_section(extension: PlatformExtension) -> str:
         for entry in extension.entries
     )
     return f"<section id='{escape(extension.slug)}'><h2>{escape(extension.label)}</h2><ul>{entry_rows}</ul></section>"
+
+
+def category_label(category: CategoryGroup) -> str:
+    return category.name.replace("_", " ").title()
 
 
 def render_article_items(articles: Sequence[Article]) -> str:
@@ -118,8 +125,8 @@ class PortalHandler(BaseHTTPRequestHandler):
     def show_home_page(self) -> None:
         sections = "".join(render_extension_section(extension) for extension in self.service.extensions)
         navigation = "".join(
-            f"<li><a href='/extensions/{escape(extension.slug)}'>{escape(extension.label)}</a></li>"
-            for extension in self.service.extensions
+            f"<li><a href='/category/{escape(category.value)}'>{escape(category_label(category))}</a></li>"
+            for category in CategoryGroup
         )
         body = f"""
 <header><h1>News Intelligence Platform</h1></header>
@@ -158,8 +165,8 @@ class PortalHandler(BaseHTTPRequestHandler):
         article_rows = render_article_items(result.items)
         pagination = self.render_pagination(page, page_size, result.total)
         html_content = render_html_page(
-            str(category),
-            f"<main><h1>{escape(str(category))}</h1><ul>{article_rows}</ul></main><p>{pagination}</p>",
+            category_label(category),
+            f"<main><h1>{escape(category_label(category))}</h1><ul>{article_rows}</ul></main><p>{pagination}</p>",
         )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
