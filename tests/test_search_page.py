@@ -7,7 +7,7 @@ from urllib.request import Request, urlopen
 
 from auth import Account, demo_account_manager
 from extensions.builtin import builtin_collections
-from app import render_article_items, render_search_results
+from app import render_article_items, render_search_results, render_article_tags
 from app import render_search_pagination
 from storage import Page
 from scaffold import Article, CategoryGroup
@@ -52,6 +52,14 @@ def test_single_page_search_hides_pagination():
     html = render_search_results("models", result, CategoryGroup.MODELS)
 
     assert "Page 1 of " not in html
+
+
+def test_article_tags_render_individually():
+    article = _article(1)
+
+    html = render_article_tags(article)
+
+    assert "<span class='tag'>technology</span>" in html
 
 
 def test_authenticated_search_page_accepts_category_filter():

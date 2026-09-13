@@ -215,6 +215,16 @@ def render_search_pagination(
     return f"Page {result.page} of {total_pages} " + " ".join(links)
 
 
+def render_article_tags(article: Article) -> str:
+    if not article.tags:
+        return ""
+    tags = "".join(
+        f"<span class='tag'>{escape(tag)}</span>"
+        for tag in article.tags
+    )
+    return f"<div class='tag-list'>{tags}</div>"
+
+
 def render_html_page(
     title: str,
     body: str,
@@ -248,6 +258,8 @@ def render_html_page(
         .category-nav a span {{ margin-left: .25rem; opacity: .7; }}
         .filter-list {{ display: flex; flex-wrap: wrap; gap: .45rem; margin: 1rem 0; }}
         .filter-list a {{ background: var(--surface); border: 1px solid var(--edge); border-radius: 99rem; color: #211f1e; font-size: .86rem; padding: .3rem .7rem; text-decoration: none; }}
+        .tag-list {{ display: flex; flex-wrap: wrap; gap: .35rem; margin: .7rem 0; }}
+        .tag {{ background: var(--surface); border: 1px solid var(--edge); border-radius: 99rem; color: #211f1e; font-size: .82rem; padding: .25rem .6rem; }}
         .article-list {{ display: grid; gap: .9rem; margin-top: 1rem; }}
         .article-card {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .65rem; padding: 1rem 1.1rem; }}
         .article-card a {{ color: var(--accent); text-decoration: none; }}
@@ -447,6 +459,7 @@ class PortalHandler(BaseHTTPRequestHandler):
             f"""<article><h1>{escape(article.title)}</h1>
 <p class='page-meta'>{escape(article.source)} · {escape(category_label(article.category_id))}</p>
 <p>{escape(article.summary)}</p>
+{render_article_tags(article)}
 <p class='actions'><a href='{escape(article.url)}'>Read source</a></p>
 </article>""",
         )

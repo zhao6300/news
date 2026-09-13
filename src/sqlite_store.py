@@ -45,7 +45,7 @@ class SQLiteArticleLayer(RepositoryLayer):
                     article.title,
                     article.url,
                     article.summary,
-                    "".join(article.tags),
+                    ",".join(article.tags),
                     article.source,
                     article.category_id,
                     article.rank,

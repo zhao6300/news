@@ -56,3 +56,22 @@ def test_sqlite_refresh_updates_existing_article(tmp_path):
     article = repository.get(1)
     assert article.rank == 3
     assert repository.total == 1
+
+
+def test_sqlite_preserves_tag_boundaries(tmp_path):
+    repository = SQLiteArticleLayer(tmp_path / "tags.db")
+    repository.add(
+        Article(
+            1,
+            "Tagged article",
+            "https://example.com/tagged",
+            "Example summary.",
+            ("AI", "Information Architecture"),
+            "Example",
+            CategoryGroup.TECH,
+            1,
+            _article(1).published_at,
+        )
+    )
+
+    assert repository.get(1).tags == ("AI", "Information Architecture")
