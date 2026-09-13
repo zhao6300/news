@@ -9,6 +9,7 @@ A phased build for a modular AI information platform covering news, technology, 
 - `src/connectors.py` — extension protocol for new information sources.
 - `src/extensions/builtin.py` — seeded content for the initial platform schema.
 - `src/services.py` — service-layer access to extensions.
+- `src/storage.py` — replaceable repository layer and simple pagination.
 - `tests/` — focused unit and HTTP integration tests.
 
 ## Requirements
@@ -41,13 +42,17 @@ The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class 
 ## Web endpoints
 
 - `/` — home dashboard with all extension entries.
-- `/extensions/{slug}` — category listing.
+- `/extensions/{slug}` — seeded extension listing.
+- `/category/{slug}` — category catalog with pagination.
+- `/article/{id}` — article detail page.
 - `/login` — early development login form.
 - `/health` — process status check.
+
+Pagination supports `?page=` and `?page_size=1..50`.
 
 ## Known next steps
 
 1. Move seeded content into a persistent storage-backed repository.
 2. Replace the placeholder password store with settings-backed account records and real session cookies.
 3. Add source scheduling and ingestion diagnostics.
-4. Expand category navigation and article detail pages.
+4. Add category filters, article result counts, and richer search.
