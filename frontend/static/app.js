@@ -80,9 +80,11 @@ function renderHome(bootstrap, sources, articles) {
     </a>`).join("");
   const articleCards = articles.items.map(articleCard).join("");
   view.innerHTML = `
-    <h1 class="page-heading">AI 信息平台</h1>
-    <p class="page-meta">按来源快速浏览新闻、技术、模型和评测内容。</p>
-    <section><h2 class="section-title">内容来源</h2><div class="content-grid two">${sourceCards}</div></section>
+    <div class="page-heading">
+      <h1>AI 信息平台</h1>
+      <p class="page-meta">来自新闻、技术、模型和评测来源的最新内容。</p>
+    </div>
+    <section><h2 class="section-title">内容来源</h2><div class="cards">${sourceCards}</div></section>
     <section><h2 class="section-title">最新内容</h2><div class="content-grid two">${articleCards || '<p class="empty">暂无内容</p>'}</div></section>`;
 }
 
@@ -97,7 +99,7 @@ function renderCategory(category, result, page) {
       <a href="/category/${category.slug}?page=${next}">下一页</a>
     </nav>` : "";
   view.innerHTML = `
-    <h1 class="page-heading">${escapeHtml(category.label)}</h1>
+    <h1 class="page-heading">${escapeHtml(categoryLabel(category.slug))}</h1>
     <p class="page-meta">${result.total} 条内容</p>
     <div class="content-grid two">${cards || '<p class="empty">该分类暂无内容</p>'}</div>${pager}`;
 }
@@ -105,8 +107,8 @@ function renderCategory(category, result, page) {
 function renderArticle(article) {
   const tags = article.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   view.innerHTML = `
-    <a href="/">← 返回首页</a>
-    <article class="detail-card" style="margin-top:.8rem">
+    <div class="page-heading"><a href="/">← 返回首页</a></div>
+    <article class="detail-card">
       <h1 class="page-heading">${escapeHtml(article.title)}</h1>
       <div class="detail-meta">
         <span>${escapeHtml(article.published_at.split("T", 1)[0])}</span>
@@ -123,8 +125,7 @@ function renderSources(sources) {
   const cards = sources.map((source) => `
     <a class="card" href="/extensions/${escapeHtml(source.slug)}">
       <h3 class="card-title">${escapeHtml(source.label)}</h3>
-      <p>${source.article_count} 条内容</p>
-      <span class="read-more">查看相关内容</span>
+      <div class="source-cat">${source.categories.map(item => item.label).join(' · ')}<span>${source.article_count}</span></div>
     </a>`).join("");
   view.innerHTML = `
     <h1 class="page-heading">内容来源</h1>
@@ -135,7 +136,7 @@ function renderSources(sources) {
 function renderExtension(extension) {
   const cards = extension.items.map(articleCard).join("");
   view.innerHTML = `
-    <a href="/sources">← 返回来源</a>
+    <a href="/sources" class="page-button">← 返回来源</a>
     <h1 class="page-heading">${escapeHtml(extension.label)}</h1>
     <p class="page-meta">${extension.article_count} 条内容</p>
     <div class="content-grid two">${cards || '<p class="empty">该来源暂无内容</p>'}</div>`;
@@ -200,7 +201,7 @@ function updateNavigation(bootstrap) {
   const currentPath = location.pathname;
   categoryNav.innerHTML = bootstrap.categories.map((category) => {
     const active = currentPath === `/category/${category.slug}` ? " active" : "";
-    return `<a class="${active}" href="/category/${category.slug}">${escapeHtml(category.label)}<span>${category.article_count}</span></a>`;
+    return `<a class="${active}" href="/category/${category.slug}">${escapeHtml(categoryLabel(category.slug))}<span>${category.article_count}</span></a>`;
   }).join("");
   searchForm.dataset.next = location.pathname + location.search;
   if (bootstrap.account) {

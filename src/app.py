@@ -200,7 +200,7 @@ def render_navigation(counts_by_category: dict[CategoryGroup, int] | None = None
         + "</a>"
         for category in CategoryGroup
     )
-    return f"<div class='category-nav'>{''.join(links)}</div>"
+    return f"<nav class='category-nav' aria-label='信息分类'>{''.join(links)}</nav>"
 
 
 def render_top_bar(authenticated_account: AuthenticatedAccount | None) -> str:
@@ -280,14 +280,14 @@ def render_search_results(
     selected_source: str | None = None,
 ) -> str:
     if not query:
-        heading = "Search"
+        heading = "搜索"
     elif result.total:
-        heading = f"Search: {query}"
+        heading = f"搜索：{query}"
     else:
-        heading = "No matching content"
+        heading = "没有匹配的内容"
     body = f"""
 <h1>{escape(heading)}</h1>
-<p>{result.total} matching page{'s' if result.total != 1 else ''}</p>
+<p class='page-meta'>{result.total} 条匹配内容</p>
 {render_search_filters(query, selected_category)}
 <div class='article-list'>{render_article_items(result.items)}</div>
 <nav class='pagination'>{render_search_pagination(query, result, selected_category, selected_source)}</nav>
@@ -360,10 +360,10 @@ def render_html_page(
     <meta name='viewport' content='width=device-width, initial-scale=1'>
 <title>{escape(title)} | News Intelligence Platform</title>
     <style>
-        :root {{ --surface: white; --edge: #dfdfd9; --muted: #64696a; --accent: #0b5f4e; }}
+        :root {{ --surface: white; --edge: #e3e6de; --muted: #6b726b; --accent: #0b5f4e; }}
         * {{ box-sizing: border-box; }}
-        body {{ background: #f6f6f3; color: #211f1e; font-family: Inter, system-ui, sans-serif; line-height: 1.6; margin: 0; padding: 0; }}
-        .layout {{ max-width: 1060px; margin: 0 auto; padding: 0 1.1rem; }}
+        body {{ background: #f6f6f3; color: #211f1e; font-family: "Noto Sans SC", system-ui, sans-serif; line-height: 1.65; margin: 0; padding: 1.7rem 1.6rem; }}
+        .layout {{ width: min(1200px, calc(100% - 2.4rem)); margin: 0 auto; }}
         header.site-header {{ background: #211f1e; color: #fff; padding: 1.1rem 0; }}
         .site-header a {{ color: #fff; text-decoration: none; }}
         .site-title {{ font-size: 1.4rem; font-weight: 700; text-decoration: none; }}
@@ -379,7 +379,7 @@ def render_html_page(
         .category-nav a {{ background: rgba(255,255,255,.12); border-radius: 99rem; color: #fff; font-size: .92rem; padding: .35rem .8rem; text-align: center; }}
         .category-nav a span {{ margin-left: .25rem; opacity: .7; }}
         .filter-list {{ display: flex; flex-wrap: wrap; gap: .45rem; margin: 1rem 0; }}
-        .filter-list a {{ background: var(--surface); border: 1px solid var(--edge); border-radius: 99rem; color: #211f1e; font-size: .86rem; padding: .3rem .7rem; text-decoration: none; }}
+        .filter-list a {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .5rem; color: #211f1e; font-size: .88rem; padding: .25rem .6rem; text-decoration: none; }}
         .tag-list {{ display: flex; flex-wrap: wrap; gap: .35rem; margin: .7rem 0; }}
         .tag {{ background: var(--surface); border: 1px solid var(--edge); border-radius: 99rem; color: #211f1e; font-size: .82rem; padding: .25rem .6rem; }}
         .article-list {{ display: grid; gap: .9rem; margin-top: 1rem; }}
@@ -403,7 +403,6 @@ def render_html_page(
 <header class='site-header'>
     <div class='layout'>
         <a class='site-title' href='/'>News Intelligence</a>
-        {render_search_form()}
         {render_navigation(counts_by_category)}
         {render_top_bar(authenticated_account)}
     </div>
@@ -416,11 +415,11 @@ def render_html_page(
 
 def render_account_page(account: AuthenticatedAccount) -> str:
     body = f"""
-<h1>Account</h1>
-<p>账户使用与平台访问说明</p>
+<h1>账户</h1>
+<p class='page-meta'>已登录：{escape(account.email)}</p>
 <div class='article-card'>
-    <strong>Signed in as {escape(account.email)}</strong>
-    <p>已经登录</p>
+    <p>当前会话保持在本服务进程内，退出登录后请重新访问。</p>
+    <p class='actions'><a href='/logout'>退出登录</a></p>
 </div>
 """
     return render_html_page("Account", body)

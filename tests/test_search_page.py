@@ -28,8 +28,8 @@ from sessions import SessionManager
 def test_search_results_show_query_and_no_match():
     empty_result = Page([], page=1, page_size=10, total=0)
 
-    assert "No matching content" in render_search_results("Example", empty_result)
-    assert "0 matching pages" in render_search_results("Example", empty_result)
+    assert "没有匹配的内容" in render_search_results("Example", empty_result)
+    assert "0 条匹配内容" in render_search_results("Example", empty_result)
 
 
 def test_article_items_render_semantic_cards_with_source_and_category():
@@ -187,7 +187,7 @@ def test_search_results_keep_source_filter_in_pagination():
 def test_account_page_shows_current_owner():
     html = render_account_page(AuthenticatedAccount(1, "member@example.com"))
 
-    assert "Signed in as member@example.com" in html
+    assert "已登录：member@example.com" in html
 
 
 def _article(article_id: int, category: CategoryGroup = CategoryGroup.TECH) -> Article:
