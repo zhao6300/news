@@ -4,6 +4,7 @@ import pytest
 
 from connectors import (
     BuiltinArticleConnector,
+    ArticleIngestionScheduler,
     Connector,
     ConnectorRegistry,
     SourceJob,
@@ -11,7 +12,8 @@ from connectors import (
 )
 from extensions.builtin import builtin_collections
 from services import InMemoryPlatformService, PlatformServiceInterface
-from scaffold import CategoryGroup
+from storage import InMemoryRepositoryLayer
+from scaffold import Article, CategoryGroup
 
 
 def test_connector_registry_register_and_get():
@@ -57,3 +59,56 @@ def test_scheduler_tracks_item_counts_and_isolates_failures():
     assert reports[0].item_count == 2
     assert reports[1].succeeded is False
     assert "source unavailable" in reports[1].error
+
+
+def test_article_ingestion_scheduler_saves_each_new_article_once():
+    repository = InMemoryRepositoryLayer()
+    repository.add(
+        Article(
+            1,
+            "Existing",
+            "https://example.com/existing",
+            "Existing summary.",
+            ("Technology",),
+            "Example",
+            CategoryGroup.TECH,
+            1,
+            None,
+        )
+    )
+    source = SourceJob(
+        "manual-source",
+        "Manual",
+        Connector(
+            [
+                Article(
+                    2,
+                    "New Article",
+                    "https://example.com/new",
+                    "New summary.",
+                    ("Technology",),
+                    "Example",
+                    CategoryGroup.TECH,
+                    1,
+                    None,
+                ),
+                Article(
+                    3,
+                    "Second New Article",
+                    "https://example.com/second",
+                    "Second summary.",
+                    ("Technology",),
+                    "Example",
+                    CategoryGroup.TECH,
+                    1,
+                    None,
+                ),
+            ]
+        ),
+    )
+
+    reports = ArticleIngestionScheduler((source,), repository).run()
+
+    assert reports[0].succeeded is True
+    assert reports[0].item_count == 2
+    assert len(repository.articles) == 3

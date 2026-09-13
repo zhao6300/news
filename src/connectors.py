@@ -92,3 +92,30 @@ class SourceScheduler(Generic[TItem]):
                     IngestionReport(job.slug, job.label, 0, repr(error))
                 )
         return reports
+
+
+class ArticleIngestionScheduler:
+    def __init__(self, jobs: Sequence[SourceJob[Article]], repository: object) -> None:
+        self.jobs = list(jobs)
+        self.repository = repository
+
+    def run(self) -> list[IngestionReport]:
+        reports = []
+        for job in self.jobs:
+            try:
+                fetched = list(job.connector.fetch())
+                seen_article_ids = {article.id for article in fetched}
+                for article in fetched:
+                    self._save_if_new(article)
+                reports.append(IngestionReport(job.slug, job.label, len(seen_article_ids)))
+            except Exception as error:
+                reports.append(
+                    IngestionReport(job.slug, job.label, 0, repr(error))
+                )
+        return reports
+
+    def _save_if_new(self, article: Article) -> None:
+        try:
+            self.repository.get(article.id)
+        except KeyError:
+            self.repository.add(article)
