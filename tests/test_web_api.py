@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+from datetime import UTC, datetime
 from urllib.parse import urlencode
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
@@ -9,9 +10,23 @@ from extensions.builtin import builtin_collections
 from app import PortalHandler, render_extension_section
 from auth import AccountManager, demo_account_manager
 from services import InMemoryPlatformService
+from scaffold import Article
 from scaffold import CategoryGroup
+from storage import InMemoryRepositoryLayer
 
 
+def _article(article_id: int, category: CategoryGroup):
+    return Article(
+        id=article_id,
+        title=f"Example {article_id}",
+        url="https://example.com",
+        summary="Example summary.",
+        tags=("example",),
+        source="Example",
+        category_id=category,
+        rank=1,
+        published_at=datetime(2026, 1, 8, tzinfo=UTC),
+    )
 def test_extension_sections_are_rendered_through_service():
     service = InMemoryPlatformService(builtin_collections())
     builtin = service.get_extension("builtin")
@@ -42,6 +57,15 @@ def test_category_page_is_resolved_through_service():
     service = InMemoryPlatformService(builtin_collections())
     assert service.get_category("ai") == CategoryGroup.AI
     assert list(service.list_article_categories()) == list(CategoryGroup)
+
+
+def test_article_detail_is_served():
+    repository = InMemoryRepositoryLayer()
+    service = InMemoryPlatformService(builtin_collections())
+    service.repository = repository
+    repository.register(_article(0, CategoryGroup.TECH))
+
+    assert service.get_article(1).title == "Example 0"
 
 
 def test_home_page_is_served_by_runtime_handler():

@@ -69,6 +69,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.show_extension_page(path.removeprefix("/extensions/"))
         elif path.startswith("/category/"):
             self.show_category_page(path.removeprefix("/category/"))
+        elif path.startswith("/article/"):
+            self.show_article_page(path.removeprefix("/article/"))
         elif path == "/health":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -128,6 +130,24 @@ class PortalHandler(BaseHTTPRequestHandler):
         html_content = render_html_page(
             str(category),
             f"<main><h1>{escape(str(category))}</h1><ul>{article_rows}</ul></main>",
+        )
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html_content.encode("utf-8"))
+
+    def show_article_page(self, article_id: str) -> None:
+        try:
+            article = self.service.get_article(int(article_id))
+        except (KeyError, ValueError):
+            self.show_not_found()
+            return
+        html_content = render_html_page(
+            article.title,
+            f"""<main><article><h1>{escape(article.title)}</h1>
+<p>{escape(article.summary)}</p>
+<p><a href='{escape(article.url)}'>Read source</a></p>
+</article></main>""",
         )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
