@@ -148,6 +148,41 @@ class AccountSettingsHandler:
     def public_profile_group(self, account: object) -> str:
         return self._verification_key
 
+    def account_subjects(self, account: object) -> tuple[str, str]:
+        for field_name in ("display_name", "timezone"):
+            if not getattr(account, field_name, None):
+                raise ValueError("Account settings require complete identity fields.")
+        for profile_field in ("handwriting_type", "bibliography"):
+            if not getattr(account.profile, profile_field, None):
+                raise ValueError("Account settings require complete profile fields.")
+        return (
+            f"{account.display_name} · {account.timezone}",
+            f"{account.profile.handwriting_type} · {account.profile.bibliography}",
+        )
+
+    def public_account_link(self, account: object) -> str:
+        for field_name in ("display_name", "timezone"):
+            if not getattr(account, field_name, None):
+                raise ValueError("Account controls require complete identity fields.")
+        slug = account.display_name.replace(" ", "-").replace("_", "-").lower()
+        if not slug:
+            raise ValueError("Account controls require a display name.")
+        return f"/account/account/{slug}.html"
+
+    def batch_add_account_public(self, accounts: Sequence[object], account: object) -> tuple[str, ...]:
+        if account not in accounts:
+            raise KeyError("Batch account changes require matching membership.")
+        return tuple(
+            self.public_account_link(member)
+            for member in accounts
+            if member not in (None, account)
+        )
+
+    def change_account_status_public(self, account: object, active: bool, auth_roots: Sequence[str]) -> str:
+        if not active:
+            self.account_subjects(account)
+        return "account-profile" if "main" in auth_roots else "account-profile-status"
+
 
 def render_navigation(counts_by_category: dict[CategoryGroup, int] | None = None) -> str:
     links = ["<a href='/'>Home</a>"]
