@@ -8,7 +8,7 @@ from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
 from extensions.builtin import builtin_collections
-from app import PortalHandler, render_article_items, render_extension_section, render_navigation
+from app import PortalHandler, render_article_items, render_extension_section, render_extension_view, render_navigation
 from auth import AccountManager, demo_account_manager
 from connectors import IngestionReport
 from sessions import SessionManager
@@ -120,6 +120,17 @@ def test_navigation_shows_non_empty_category_counts():
 
     assert "/category/tech" in html
     assert "<span>3</span>" in html
+
+
+def test_extension_view_summarizes_articles_by_category():
+    extension = builtin_collections()[0]
+
+    html = render_extension_view(extension)
+
+    assert "Builtin" in html
+    assert "6 articles" in html
+    assert "New Insight Article" in html
+    assert "/category/news" in html
 
 
 def test_home_page_is_served_by_runtime_handler():

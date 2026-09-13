@@ -41,6 +41,28 @@ def category_label(category: CategoryGroup) -> str:
     return category.name.replace("_", " ").title()
 
 
+def render_extension_view(extension: PlatformExtension) -> str:
+    counts = {category: 0 for category in CategoryGroup}
+    for entry in extension.entries:
+        counts[entry.category_id] += 1
+    category_links = "".join(
+        f"""
+        <a href='/category/{category.value}'>
+            {category_label(category)}
+            <span>{count}</span>
+        </a>
+        """
+        for category, count in counts.items()
+        if count > 0
+    )
+    return f"""
+<h1>{escape(extension.label)}</h1>
+<p class='page-meta'>{len(extension.entries)} articles from this source.</p>
+<div class='filter-list'>{category_links}</div>
+<div class='article-list'>{render_article_items(extension.entries)}</div>
+"""
+
+
 def render_article_items(articles: Sequence[Article]) -> str:
     return "".join(
         f"""
@@ -285,7 +307,11 @@ class PortalHandler(BaseHTTPRequestHandler):
         except KeyError:
             self.show_not_found()
             return
-        html_content = render_html_page(extension.label, render_extension_section(extension))
+        html_content = render_html_page(
+            extension.label,
+            render_extension_view(extension),
+            self.service.counts_by_category(),
+        )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()

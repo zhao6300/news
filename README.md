@@ -47,7 +47,7 @@ The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class 
 ## Web endpoints
 
 - `/` — home dashboard with all extension entries.
-- `/extensions/{slug}` — seeded extension listing.
+- `/extensions/{slug}` — source-specific listing with article count and category links.
 - `/category/{slug}` — category catalog with pagination.
 - `/article/{id}` — article detail page.
 - `/search?q=` — keyword-based article search and optional category filter.
@@ -60,4 +60,4 @@ Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional 
 
 ## Known next steps
 
-1. Add source-specific views.
+1. Add source scheduling and ingestion persistence.

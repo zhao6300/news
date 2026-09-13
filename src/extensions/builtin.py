@@ -13,6 +13,17 @@ def _published_at(day: date) -> datetime:
 def builtin_collections() -> Sequence[PlatformExtension]:
     entries = [
         Article(
+            id=6,
+            title="New Insight Article",
+            url="https://example.com/new-insight",
+            summary="Newest research insight added to the builtin source.",
+            tags=("Research", "AI"),
+            source="Newsroom",
+            category_id=CategoryGroup.NEWS,
+            rank=1,
+            published_at=_published_at(date(2026, 3, 15)),
+        ),
+        Article(
             id=1,
             title="AI Information Discovery",
             url="https://example.com/ai",
