@@ -13,6 +13,15 @@ def test_search_results_show_query_and_no_match():
     assert "0 matching pages" in render_search_results("Example", empty_result)
 
 
+def test_article_items_render_semantic_cards_with_source_and_category():
+    html = render_article_items([_article(1)])
+
+    assert "<article class='article-card'>" in html
+    assert "/article/1" in html
+    assert "Article 1" in html
+    assert "Example · Tech" in html
+
+
 def _article(article_id: int, category: CategoryGroup = CategoryGroup.TECH) -> Article:
     return Article(
         id=article_id,

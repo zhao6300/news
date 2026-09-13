@@ -19,10 +19,21 @@ from storage import Page
 
 def render_extension_section(extension: PlatformExtension) -> str:
     entry_rows = "".join(
-        f"<li><a href='{escape(str(entry.url))}'>{escape(entry.title)}</a><p>{escape(entry.summary)}</p></li>"
+        f"""
+        <article class='article-card'>
+            <a href='/article/{entry.id}'><strong>{escape(entry.title)}</strong></a>
+            <p>{escape(entry.summary)}</p>
+            <span class='meta'>{escape(entry.source)} · {escape(category_label(entry.category_id))}</span>
+        </article>
+        """
         for entry in extension.entries
     )
-    return f"<section id='{escape(extension.slug)}'><h2>{escape(extension.label)}</h2><ul>{entry_rows}</ul></section>"
+    return f"""
+    <section id='{escape(extension.slug)}'>
+        <h2>{escape(extension.label)}</h2>
+        <div class='article-list'>{entry_rows}</div>
+    </section>
+    """
 
 
 def category_label(category: CategoryGroup) -> str:
@@ -31,21 +42,43 @@ def category_label(category: CategoryGroup) -> str:
 
 def render_article_items(articles: Sequence[Article]) -> str:
     return "".join(
-        f"<li><a href='/article/{article.id}'><strong>{escape(article.title)}</strong></a><p>{escape(article.summary)}</p></li>"
+        f"""
+        <article class='article-card'>
+            <a href='/article/{article.id}'><strong>{escape(article.title)}</strong></a>
+            <p>{escape(article.summary)}</p>
+            <span class='meta'>{escape(article.source)} · {escape(category_label(article.category_id))}</span>
+        </article>
+        """
         for article in articles
     )
 
 
 def render_login_form(message: str | None = None) -> str:
     notice = f"<p>{escape(message)}</p>" if message else ""
-    return f"""<main><h1>Sign In</h1>{notice}
+    return f"""<div class='login-panel'><h1>Sign In</h1>{notice}
 <form method='post' action='/login'>
 <label for='email'>Email</label>
 <input id='email' name='email' type='email' required>
 <label for='password'>Password</label>
 <input id='password' name='password' type='password' required>
 <button type='submit'>Sign In</button>
-</form></main>"""
+</form></div>"""
+
+
+def render_navigation() -> str:
+    links = [f"<a href='/'>Home</a>"]
+    links.extend(f"<a href='/category/{category.value}'>{category_label(category)}</a>" for category in CategoryGroup)
+    return f"<div class='category-nav'>{''.join(links)}</div>"
+
+
+def render_search_form(query: str = "") -> str:
+    return f"""
+    <form class='search-form' method='get' action='/search'>
+        <label for='q'>Search</label>
+        <input id='q' name='q' type='search' value='{escape(query)}' placeholder='News, technology, models, reviews...' required>
+        <button type='submit'>Search</button>
+    </form>
+    """
 
 
 def render_html_page(title: str, body: str) -> str:
@@ -54,15 +87,49 @@ def render_html_page(title: str, body: str) -> str:
 <head>
     <meta charset='utf-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <title>{escape(title)} | News Intelligence Platform</title>
+<title>{escape(title)} | News Intelligence Platform</title>
     <style>
-        body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 2rem; }}
-        h2 {{ margin-top: 2rem; }}
-        ul {{ padding-left: 1.2rem; }}
+        :root {{ --surface: white; --edge: #dfdfd9; --muted: #64696a; --accent: #0b5f4e; }}
+        * {{ box-sizing: border-box; }}
+        body {{ background: #f6f6f3; color: #211f1e; font-family: Inter, system-ui, sans-serif; line-height: 1.6; margin: 0; padding: 0; }}
+        .layout {{ max-width: 1060px; margin: 0 auto; padding: 0 1.1rem; }}
+        header.site-header {{ background: #211f1e; color: #fff; padding: 1.1rem 0; }}
+        .site-header a {{ color: #fff; text-decoration: none; }}
+        .site-title {{ font-size: 1.4rem; font-weight: 700; text-decoration: none; }}
+        .search-form {{ display: grid; gap: .45rem; margin: 1.2rem 0; }}
+        .search-form label {{ position: absolute; clip: rect(0 0 0 0); clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }}
+        .search-form input {{ border: 1px solid var(--edge); border-radius: .35rem; font: inherit; padding: .6rem .8rem; }}
+        .search-form button {{ background: var(--accent); border: 0; border-radius: .35rem; color: #fff; cursor: pointer; font: inherit; padding: .6rem 1rem; }}
+        main.page {{ padding: 1.8rem 0 2.4rem; }}
+        h1 {{ font-size: 1.7rem; line-height: 1.2; margin: .2rem 0 .3rem; }}
+        h2 {{ margin: 1.5rem 0 .8rem; }}
+        .page-meta {{ color: var(--muted); font-size: .95rem; margin: 0; }}
+        .category-nav {{ display: grid; gap: .65rem; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); margin-top: 1.2rem; }}
+        .category-nav a {{ background: rgba(255,255,255,.12); border-radius: 99rem; color: #fff; font-size: .92rem; padding: .35rem .8rem; text-align: center; }}
+        .article-list {{ display: grid; gap: .9rem; margin-top: 1rem; }}
+        .article-card {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .65rem; padding: 1rem 1.1rem; }}
+        .article-card a {{ color: var(--accent); text-decoration: none; }}
+        .article-card a:hover {{ text-decoration: underline; }}
+        .article-card p {{ margin: .45rem 0; }}
+        .meta {{ color: var(--muted); font-size: .86rem; }}
+        .actions {{ margin-top: 1.3rem; }}
+        .pagination {{ color: var(--muted); font-size: .94rem; margin-top: 1.3rem; }}
+        footer {{ border-top: 1px solid var(--edge); color: var(--muted); font-size: .88rem; padding: 1.2rem 1.1rem 2rem; }}
+        .login-panel {{ background: var(--surface); border: 1px solid var(--edge); border-radius: .8rem; max-width: 22rem; padding: 1.4rem; }}
+        form:not(.search-form) label {{ display: block; font-weight: 600; margin: .8rem 0 .2rem; }}
+        form:not(.search-form) input {{ border: 1px solid var(--edge); border-radius: .4rem; padding: .6rem .7rem; width: 100%; }}
+        form:not(.search-form) button {{ background: var(--accent); border: 0; border-radius: .4rem; color: #fff; cursor: pointer; display: block; font: inherit; margin-top: 1.1rem; padding: .6rem .9rem; }}
     </style>
 </head>
 <body>
-{body}
+<header class='site-header'>
+    <div class='layout'>
+        <a class='site-title' href='/'>News Intelligence</a>
+        {render_search_form()}
+        {render_navigation()}
+    </div>
+</header>
+<main class='page layout'>{body}</main>
 <footer>© 2026 News Intelligence Platform</footer>
 </body>
 </html>"""
@@ -80,10 +147,10 @@ def render_search_results(query: str, result: Page) -> str:
     else:
         heading = "No matching content"
     body = f"""
-<main><h1>{escape(heading)}</h1>
+<h1>{escape(heading)}</h1>
 <p>{result.total} matching page{'s' if result.total != 1 else ''}</p>
-<ul>{render_article_items(result.items)}</ul>
-</main>"""
+<div class='article-list'>{render_article_items(result.items)}</div>
+    """
     return render_html_page("Search", body)
 
 
@@ -194,7 +261,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         pagination = self.render_pagination(page, page_size, result.total)
         html_content = render_html_page(
             category_label(category),
-            f"<main><h1>{escape(category_label(category))}</h1><ul>{article_rows}</ul></main><p>{pagination}</p>",
+            f"<h1>{escape(category_label(category))}</h1><p class='page-meta'>{result.total} articles · page {page}</p><div class='article-list'>{article_rows}</div><nav class='pagination'>{pagination}</nav>",
         )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -209,10 +276,11 @@ class PortalHandler(BaseHTTPRequestHandler):
             return
         html_content = render_html_page(
             article.title,
-            f"""<main><article><h1>{escape(article.title)}</h1>
+            f"""<article><h1>{escape(article.title)}</h1>
+<p class='page-meta'>{escape(article.source)} · {escape(category_label(article.category_id))}</p>
 <p>{escape(article.summary)}</p>
-<p><a href='{escape(article.url)}'>Read source</a></p>
-</article></main>""",
+<p class='actions'><a href='{escape(article.url)}'>Read source</a></p>
+</article>""",
         )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -221,7 +289,7 @@ class PortalHandler(BaseHTTPRequestHandler):
 
     def show_not_found(self) -> None:
         path = urlparse(self.path).path
-        html_content = render_html_page("Not Found", f"<main><h1>404</h1><p>{escape(path)} does not exist.</p></main>")
+        html_content = render_html_page("Not Found", f"<h1>404</h1><p>{escape(path)} does not exist.</p>")
         self.send_response(404)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
@@ -248,7 +316,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         session = self.session_manager.create(self.account_manager.authenticate(email, password))
         html_content = render_html_page(
             "Signed In",
-            "<main><h1>Welcome back</h1><p>You are signed in to the platform.</p></main>",
+            "<h1>Welcome back</h1><p>You are signed in to the platform.</p>",
         )
         self.send_response(303)
         self.send_header("Content-Type", "text/html; charset=utf-8")
