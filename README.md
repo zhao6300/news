@@ -48,6 +48,8 @@ The platform exposes `AI`, `News`, `Technology`, `Models`, and `Reviews` as firs
 
 Custom sources can implement the `fetch` protocol, be wrapped in the connector registry, and appear in the startup ingestion report without changing the Web routes.
 
+RSS sources can be enabled with `PLATFORM_FEEDS`. Each record requires `slug`, `source`, `category`, and `url`; the `url` points to an RSS document. When this variable is absent, the platform only uses the built-in seed collectors.
+
 ## Web endpoints
 
 - `/` — home dashboard with all extension entries.
@@ -64,6 +66,6 @@ Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional 
 
 ## Known next steps
 
-1. Schedule additional external source collectors once their input formats are selected.
+1. Add more external source formats and per-source collection policies.
 
 Article ingestion now runs through the connector scheduler, deduplicates by article ID, and writes into the repository layer used by category pages.

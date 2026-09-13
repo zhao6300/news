@@ -1,10 +1,11 @@
 import os
+from json import loads
 from typing import Sequence
 
 from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import AccountManager, configured_account
-from connectors import ArticleIngestionScheduler, ConnectorRegistry
+from connectors import ArticleIngestionScheduler, ConnectorRegistry, RssItemConnector, SourceJob
 from sessions import SessionManager
 from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
@@ -12,11 +13,72 @@ from searchers import InMemorySearchEngine
 from storage import InMemoryRepositoryLayer, RepositoryLayer
 from sqlite_store import SQLiteArticleLayer
 from http.server import ThreadingHTTPServer
+from urllib.request import urlopen
 
 
-def run_ingestion_reports(extensions: Sequence, repository: object) -> list:
+def read_feed(url: str) -> str:
+    with urlopen(url, timeout=10) as response:
+        return response.read().decode("utf-8")
+
+
+def configured_rss_connectors(config_json: str | None) -> list[RssItemConnector]:
+    if not config_json:
+        return []
+    parsed = loads(config_json)
+    if not isinstance(parsed, list):
+        raise ValueError("PLATFORM_FEEDS must decode to a JSON list.")
+    connectors = []
+    for record in parsed:
+        if not isinstance(record, dict):
+            raise ValueError("Each configured RSS feed must be an object.")
+        slug = str(record.get("slug", ""))
+        source = str(record.get("source", ""))
+        category_value = str(record.get("category", ""))
+        url = str(record.get("url", ""))
+        if not slug or not source or not url or not category_value:
+            raise ValueError("Configured RSS feeds require slug, source, category, and url.")
+        connectors.append(
+            RssItemConnector(
+                slug,
+                source,
+                CategoryGroup(category_value),
+                feed_url=url,
+                fetcher=read_feed,
+            )
+        )
+    return connectors
+
+
+def feed_source_extensions(
+    connectors: Sequence[RssItemConnector],
+    articles: Sequence,
+) -> list[PlatformExtension]:
+    requested_sources = {connector.source for connector in connectors}
+    grouped: dict[str, list] = {}
+    for article in articles:
+        if article.source in requested_sources:
+            grouped.setdefault(article.source, []).append(article)
+    return [
+        PlatformExtension(
+            slug=connector.slug,
+            label=connector.source,
+            entries=grouped.get(connector.source, ()),
+        )
+        for connector in connectors
+    ]
+
+
+def run_ingestion_reports(
+    extensions: Sequence,
+    repository: object,
+    feed_connectors: Sequence[RssItemConnector] = (),
+) -> list:
     registry = ConnectorRegistry()
     jobs = [registry.register_extension(extension).source_job for extension in extensions]
+    jobs.extend(
+        SourceJob(feed.slug, feed.source, feed)
+        for feed in feed_connectors
+    )
     scheduler = ArticleIngestionScheduler(jobs, repository)
     return scheduler.run()
 
@@ -25,16 +87,17 @@ def platform_components(database_path: str | None = None) -> tuple[Sequence, Rep
     extensions = builtin_collections()
     if not extensions:
         raise RuntimeError("The platform must load at least one extension.")
+    feed_connectors = configured_rss_connectors(os.getenv("PLATFORM_FEEDS"))
 
     repository = SQLiteArticleLayer(database_path) if database_path else InMemoryRepositoryLayer()
     if repository.total == 0:
-        run_ingestion_reports(extensions, repository)
+        run_ingestion_reports(extensions, repository, feed_connectors)
         if isinstance(repository, InMemoryRepositoryLayer):
             repository.next_id = max(repository.articles, default=0) + 1
-    else:
-        extensions = (PlatformExtension(slug="builtin", label="Builtin", entries=repository.all()),)
+    if feed_connectors:
+        extensions = tuple(extensions) + tuple(feed_source_extensions(feed_connectors, repository.all()))
 
-    search_engine = InMemorySearchEngine(extensions[0].entries)
+    search_engine = InMemorySearchEngine(repository.all())
     service = InMemoryPlatformService(extensions)
     service.repository = repository
     return extensions, repository, search_engine, service
@@ -42,6 +105,7 @@ def platform_components(database_path: str | None = None) -> tuple[Sequence, Rep
 
 def main() -> None:
     extensions, repository, search_engine, service = platform_components(os.getenv("PLATFORM_DB"))
+    feed_connectors = configured_rss_connectors(os.getenv("PLATFORM_FEEDS"))
     host = os.getenv("PLATFORM_HOST", "127.0.0.1")
     port = int(os.getenv("PLATFORM_PORT", "8000"))
 
@@ -51,7 +115,7 @@ def main() -> None:
             AccountManager((configured_account(),)),
             SessionManager(),
             search_engine,
-            ingestion_reports=run_ingestion_reports(extensions, repository),
+            ingestion_reports=run_ingestion_reports(extensions, repository, feed_connectors),
             *args,
             **kwargs,
         )
