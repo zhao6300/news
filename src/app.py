@@ -122,14 +122,19 @@ class PortalHandler(BaseHTTPRequestHandler):
         except KeyError:
             self.show_not_found()
             return
-        articles = self.service.list_articles(category)
+        parsed = urlparse(self.path)
+        query = parse_qs(parsed.query)
+        page = max(1, int(query.get("page", ["1"])[0]))
+        page_size = min(50, max(1, int(query.get("page_size", ["10"])[0])))
+        result = self.service.list_articles(category, page=page, page_size=page_size)
         article_rows = "".join(
-            f"<li><strong>{escape(article.title)}</strong><p>{escape(article.summary)}</p></li>"
+            f"<li><a href='/article/{article.id}'><strong>{escape(article.title)}</strong></a><p>{escape(article.summary)}</p></li>"
             for article in articles
         )
+        pagination = self.render_pagination(page, page_size, result.total)
         html_content = render_html_page(
             str(category),
-            f"<main><h1>{escape(str(category))}</h1><ul>{article_rows}</ul></main>",
+            f"<main><h1>{escape(str(category))}</h1><ul>{article_rows}</ul></main><p>{pagination}</p>",
         )
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -188,3 +193,12 @@ class PortalHandler(BaseHTTPRequestHandler):
 
     def log_message(self, message: str, *args: object) -> None:
         pass
+
+    def render_pagination(self, page: int, page_size: int, total_count: int) -> str:
+        total_pages = max(1, (total_count + page_size - 1) // page_size)
+        previous_page = max(1, page - 1)
+        next_page = min(total_pages, page + 1)
+        links = [f"<a href='?page=1'>First</a>", f"<a href='?page={previous_page}'>Prev</a>"]
+        links.append(f"<a href='?page={next_page}'>Next</a>")
+        links.append(f"<a href='?page={total_pages}'>Last</a>")
+        return f"Page {page} of {total_pages} " + " ".join(links)

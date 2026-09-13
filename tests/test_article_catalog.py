@@ -26,5 +26,7 @@ def test_service_paginates_articles_from_repository():
     )
     repository.register(article)
 
-    assert [entry.title for entry in service.list_articles(CategoryGroup.TECH)] == ["Example"]
+    page = service.list_articles(CategoryGroup.TECH)
+    assert [entry.title for entry in page.items] == ["Example"]
+    assert page.total == 1
     assert service.get_article(1) == repository.get(1)

@@ -39,11 +39,10 @@ class InMemoryPlatformService(PlatformServiceInterface):
     def list_article_categories() -> Sequence[CategoryGroup]:
         return list(CategoryGroup)
 
-    def list_articles(self, category: CategoryGroup, page: int = 1, page_size: int = 10) -> Sequence[Article]:
+    def list_articles(self, category: CategoryGroup, page: int = 1, page_size: int = 10) -> Page:
         if self.repository is None:
             raise RuntimeError("A repository has not been attached to the service.")
-        result: Page = self.repository.list_page(category, page=page, page_size=page_size)
-        return result.items
+        return self.repository.list_page(category, page=page, page_size=page_size)
 
     def get_article(self, article_id: int) -> Article:
         if self.repository is None:

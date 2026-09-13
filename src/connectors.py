@@ -18,7 +18,7 @@ class SourceConnector(Protocol[TItem]):
 
 class Connector(Generic[TItem]):
     def __init__(self, entries: list[TItem]) -> None:
-        self.entries = entries
+        self.entries = list(entries)
 
     def fetch(self) -> list[TItem]:
         return list(self.entries)
