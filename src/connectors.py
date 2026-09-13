@@ -32,7 +32,7 @@ class TextConnector(Connector[TextEntry]):
 class SourceJob(Generic[TItem]):
     slug: str
     label: str
-    connector: Connector[TItem]
+    connector: SourceConnector[TItem]
 
 
 @dataclass(frozen=True, slots=True)
