@@ -48,7 +48,7 @@ The platform exposes `AI`, `News`, `Technology`, `Models`, and `Reviews` as firs
 
 Custom sources can implement the `fetch` protocol, be wrapped in the connector registry, and appear in the startup ingestion report without changing the Web routes.
 
-RSS sources can be enabled with `PLATFORM_FEEDS`. Each record requires `slug`, `source`, `category`, and `url`; the `url` points to an RSS document. Optional numeric `limit` controls how many items each feed may contribute. When this variable is absent, the platform only uses the built-in seed collectors.
+RSS sources can be enabled with `PLATFORM_FEEDS`. Each record requires `slug`, `source`, `category`, and `url`; the `url` points to an RSS document. Optional numeric `limit` controls how many items each feed may contribute, and optional numeric `timeout` controls network wait in seconds. When this variable is absent, the platform only uses the built-in seed collectors.
 
 ## Web endpoints
 

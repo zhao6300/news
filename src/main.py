@@ -1,4 +1,5 @@
 import os
+from functools import partial
 from json import loads
 from typing import Sequence
 
@@ -16,8 +17,10 @@ from http.server import ThreadingHTTPServer
 from urllib.request import urlopen
 
 
-def read_feed(url: str) -> str:
-    with urlopen(url, timeout=10) as response:
+def read_feed(url: str, timeout: int = 10) -> str:
+    if not isinstance(timeout, int) or timeout < 1:
+        raise ValueError("Feed timeout must be a positive integer.")
+    with urlopen(url, timeout=timeout) as response:
         return response.read().decode("utf-8")
 
 
@@ -36,6 +39,9 @@ def configured_rss_connectors(config_json: str | None) -> list[RssItemConnector]
         category_value = str(record.get("category", ""))
         url = str(record.get("url", ""))
         limit = record.get("limit")
+        timeout = record.get("timeout", 10)
+        if not isinstance(timeout, int) or timeout < 1:
+            raise ValueError("Configured RSS timeout must be a positive integer.")
         if limit is not None and (not isinstance(limit, int) or limit < 1):
             raise ValueError("Configured RSS limit must be a positive integer.")
         if not slug or not source or not url or not category_value:
@@ -46,7 +52,7 @@ def configured_rss_connectors(config_json: str | None) -> list[RssItemConnector]
                 source,
                 CategoryGroup(category_value),
                 feed_url=url,
-                fetcher=read_feed,
+                fetcher=partial(read_feed, timeout=timeout),
                 limit=limit,
             )
         )
