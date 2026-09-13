@@ -145,15 +145,15 @@ Acceptance:
 - Account IDs, first names, last names are stored as integers.
 - Persisted account properties, status, last-seen time, preferences, model subscriptions, and instance state are covered.
 
-## Phase 15 — Account Settings Browser UI
+## Phase 15 — Account Settings Use-Cases
 
-Scope: use the upgraded model in `/account/account.html` and `/account/account/{slug}.html`.
+Scope: validate the upgraded account model and prepare the use-cases used by `/account/account.html` and `/account/account/{slug}.html`.
 
 Acceptance:
 
-- Account settings compose profile sections, account controls, and controls for deleting, renaming, adding, or changing status.
-- Positive changes return 303 to the action URL.
-- Notifications are implemented without third-party frameworks.
+- Account settings validate complete identity and profile fields.
+- Public account links normalize display names into signed slot paths.
+- Settings behavior is covered by module tests without changing route dispatch until the HTML phase.
 
 ## Phase 16 — Large-Scale Content Crawl
 
