@@ -47,6 +47,7 @@ Acceptance:
 - The UI communicates through the service layer, not directly with extensions.
 - Category detail pages and article detail pages are covered by tests.
 - The health endpoint is covered by tests.
+- Keyword search is available through `/api/search` and `/search?q=`.
 
 ## Phase 06 — Test Coverage
 

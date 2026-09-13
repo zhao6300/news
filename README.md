@@ -46,6 +46,7 @@ The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class 
 - `/extensions/{slug}` — seeded extension listing.
 - `/category/{slug}` — category catalog with pagination.
 - `/article/{id}` — article detail page.
+- `/search?q=` — keyword-based article search.
 - `/login` — login form and session creation.
 - `/logout` — session revocation.
 - `/health` — process status check.
