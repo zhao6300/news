@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from html import escape
 from collections.abc import Sequence
+from json import dumps
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
@@ -9,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 from auth import AccountManager
 from services import InMemoryPlatformService
 from sessions import SessionManager
+from searchers import SearchEngine
 from scaffold import PlatformExtension
 from scaffold import Article
 from scaffold import CategoryGroup
@@ -71,12 +73,14 @@ class PortalHandler(BaseHTTPRequestHandler):
         service: InMemoryPlatformService,
         account_manager: AccountManager,
         session_manager: SessionManager,
+        search_engine: SearchEngine,
         *args: object,
         **kwargs: object,
     ) -> None:
         self.service = service
         self.account_manager = account_manager
         self.session_manager = session_manager
+        self.search_engine = search_engine
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
@@ -100,6 +104,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(b'{"status": "ok"}')
+        elif path == "/api/search":
+            self.handle_search_api()
         elif path == "/login":
             self.show_login_page()
         else:
@@ -117,7 +123,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         return morsel.value if morsel else None
 
     def is_authenticated(self, path: str) -> bool:
-        return path in {"/login", "/health"} or self.current_session() is not None
+        return path in {"/login", "/health", "/api/search"} or self.current_session() is not None
 
     def current_session(self):
         return self.session_manager.resolve(self.session_token())
@@ -241,6 +247,36 @@ class PortalHandler(BaseHTTPRequestHandler):
         )
         self.send_header("Location", "/login")
         self.end_headers()
+
+    def handle_search_api(self) -> None:
+        query = parse_qs(urlparse(self.path).query)
+        text = query.get("q", [""])[0]
+        page = max(1, int(query.get("page", ["1"])[0]))
+        page_size = min(100, max(1, int(query.get("page_size", ["10"])[0])))
+        result = self.search_engine.search(text, page=page, page_size=page_size)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(
+            dumps(
+                {
+                    "query": text,
+                    "page": result.page,
+                    "page_size": result.page_size,
+                    "total": result.total,
+                    "items": [
+                        {
+                            "id": article.id,
+                            "title": article.title,
+                            "summary": article.summary,
+                            "category": article.category_id.value,
+                        }
+                        for article in result.items
+                    ],
+                },
+                ensure_ascii=False,
+            ).encode("utf-8"),
+        )
 
     def log_message(self, message: str, *args: object) -> None:
         pass

@@ -6,6 +6,7 @@ from auth import demo_account_manager
 from sessions import SessionManager
 from scaffold import CategoryGroup
 from services import InMemoryPlatformService
+from searchers import InMemorySearchEngine
 from storage import InMemoryRepositoryLayer
 from http.server import ThreadingHTTPServer
 
@@ -17,6 +18,7 @@ def main() -> None:
     print(f"Loaded {len(extensions[0].entries)} articles across {len(CategoryGroup)} categories.")
 
     service = InMemoryPlatformService(extensions)
+    search_engine = InMemorySearchEngine(extensions[0].entries if extensions else [])
     repository = InMemoryRepositoryLayer()
     for extension in extensions:
         for article in extension.entries:
@@ -31,6 +33,7 @@ def main() -> None:
             service,
             demo_account_manager(),
             SessionManager(),
+            search_engine,
             *args,
             **kwargs,
         )

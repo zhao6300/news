@@ -10,6 +10,7 @@ from extensions.builtin import builtin_collections
 from app import PortalHandler, render_article_items, render_extension_section
 from auth import AccountManager, demo_account_manager
 from sessions import SessionManager
+from searchers import InMemorySearchEngine
 from services import InMemoryPlatformService
 from scaffold import Article
 from scaffold import CategoryGroup
@@ -41,7 +42,7 @@ def test_health_endpoint_is_api_reachable():
     session_manager = SessionManager()
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, *args, **kwargs),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, InMemorySearchEngine([]), *args, **kwargs),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -85,7 +86,7 @@ def test_home_page_is_served_by_runtime_handler():
     session_manager = SessionManager()
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, *args, **kwargs),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, InMemorySearchEngine([]), *args, **kwargs),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -105,7 +106,7 @@ def test_login_submission_reports_valid_credentials():
     session_manager = SessionManager()
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, *args, **kwargs),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, InMemorySearchEngine([]), *args, **kwargs),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
