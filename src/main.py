@@ -133,3 +133,7 @@ def main() -> None:
     server = ThreadingHTTPServer((host, port), handler)
     print(f"Serving on http://{host}:{port}")
     server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

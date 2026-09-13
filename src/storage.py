@@ -8,6 +8,9 @@ from scaffold import Article, CategoryGroup
 
 
 class RepositoryLayer:
+    def all(self) -> Sequence[Article]:
+        raise NotImplementedError
+
     def add(self, article: Article) -> None:
         raise NotImplementedError
 
@@ -70,6 +73,9 @@ class InMemoryRepositoryLayer(RepositoryLayer):
             raise ValueError(f"Article id {article.id} is already present.")
         self.articles[article.id] = article
         self.categories[article.category_id].append(article)
+
+    def all(self) -> list[Article]:
+        return list(self.articles.values())
 
     def get(self, article_id: int) -> Article:
         try:
