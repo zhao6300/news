@@ -97,6 +97,12 @@ class SQLiteArticleLayer(RepositoryLayer):
         with connect(self.database) as db:
             return db.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
 
+    def counts_by_category(self) -> dict[CategoryGroup, int]:
+        with connect(self.database) as db:
+            rows = db.execute("SELECT category_id, COUNT(*) FROM articles GROUP BY category_id").fetchall()
+        raw_counts = {CategoryGroup(row[0]): row[1] for row in rows}
+        return {category: raw_counts.get(category, 0) for category in CategoryGroup}
+
 
 def _article_from_row(row: tuple) -> Article:
     return Article(

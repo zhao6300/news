@@ -20,6 +20,9 @@ class RepositoryLayer:
     def list_page(self, category: CategoryGroup, page: int = 1, page_size: int = 10) -> Sequence[Article]:
         raise NotImplementedError
 
+    def counts_by_category(self) -> dict[CategoryGroup, int]:
+        raise NotImplementedError
+
     @property
     def total(self) -> int:
         raise NotImplementedError
@@ -90,3 +93,6 @@ class InMemoryRepositoryLayer(RepositoryLayer):
     @property
     def total(self) -> int:
         return len(self.articles)
+
+    def counts_by_category(self) -> dict[CategoryGroup, int]:
+        return {category: len(self.categories.get(category, ())) for category in CategoryGroup}

@@ -8,7 +8,7 @@ from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
 from extensions.builtin import builtin_collections
-from app import PortalHandler, render_article_items, render_extension_section
+from app import PortalHandler, render_article_items, render_extension_section, render_navigation
 from auth import AccountManager, demo_account_manager
 from connectors import IngestionReport
 from sessions import SessionManager
@@ -113,6 +113,13 @@ def test_category_page_renders_article_results():
     repository.register(_article(0, CategoryGroup.TECH))
 
     assert "Example 0" in render_article_items(service.list_articles(CategoryGroup.TECH).items)
+
+
+def test_navigation_shows_non_empty_category_counts():
+    html = render_navigation({CategoryGroup.TECH: 3})
+
+    assert "/category/tech" in html
+    assert "<span>3</span>" in html
 
 
 def test_home_page_is_served_by_runtime_handler():

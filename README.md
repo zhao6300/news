@@ -31,7 +31,7 @@ Override the placeholder account with `PLATFORM_ACCOUNT_EMAIL` and `PLATFORM_ACC
 
 ## Web experience
 
-The platform provides a consistent top bar, global keyword search, category shortcuts, source attribution on cards, readable article cards, category counts, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
+The platform provides a consistent top bar, global keyword search, category shortcuts with result counts, source attribution on cards, readable article cards, a login screen, and a health endpoint. The built-in demo account accepts `member@example.com` and `demo-password` for early development only.
 
 ## How to inspect
 
@@ -60,4 +60,4 @@ Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional 
 
 ## Known next steps
 
-1. Add source-specific views and article result counts.
+1. Add source-specific views.

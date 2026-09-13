@@ -66,9 +66,19 @@ def render_login_form(message: str | None = None) -> str:
 </form></div>"""
 
 
-def render_navigation() -> str:
-    links = [f"<a href='/'>Home</a>"]
-    links.extend(f"<a href='/category/{category.value}'>{category_label(category)}</a>" for category in CategoryGroup)
+def render_navigation(counts_by_category: dict[CategoryGroup, int] | None = None) -> str:
+    links = ["<a href='/'>Home</a>"]
+    links.extend(
+        f"<a href='/category/{category.value}'>"
+        f"{category_label(category)}"
+        + (
+            f"<span>{counts_by_category[category]}</span>"
+            if counts_by_category is not None and counts_by_category.get(category)
+            else ""
+        )
+        + "</a>"
+        for category in CategoryGroup
+    )
     return f"<div class='category-nav'>{''.join(links)}</div>"
 
 
@@ -104,7 +114,7 @@ def _search_url(query: str, category: CategoryGroup | None = None) -> str:
     return f"/search?{urlencode(parameters)}"
 
 
-def render_html_page(title: str, body: str) -> str:
+def render_html_page(title: str, body: str, counts_by_category: dict[CategoryGroup, int] | None = None) -> str:
     return f"""<!doctype html>
 <html lang='en'>
 <head>
@@ -129,6 +139,7 @@ def render_html_page(title: str, body: str) -> str:
         .page-meta {{ color: var(--muted); font-size: .95rem; margin: 0; }}
         .category-nav {{ display: grid; gap: .65rem; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); margin-top: 1.2rem; }}
         .category-nav a {{ background: rgba(255,255,255,.12); border-radius: 99rem; color: #fff; font-size: .92rem; padding: .35rem .8rem; text-align: center; }}
+        .category-nav a span {{ margin-left: .25rem; opacity: .7; }}
         .filter-list {{ display: flex; flex-wrap: wrap; gap: .45rem; margin: 1rem 0; }}
         .filter-list a {{ background: var(--surface); border: 1px solid var(--edge); border-radius: 99rem; color: #211f1e; font-size: .86rem; padding: .3rem .7rem; text-decoration: none; }}
         .article-list {{ display: grid; gap: .9rem; margin-top: 1rem; }}
@@ -151,7 +162,7 @@ def render_html_page(title: str, body: str) -> str:
     <div class='layout'>
         <a class='site-title' href='/'>News Intelligence</a>
         {render_search_form()}
-        {render_navigation()}
+        {render_navigation(counts_by_category)}
     </div>
 </header>
 <main class='page layout'>{body}</main>
@@ -258,16 +269,11 @@ class PortalHandler(BaseHTTPRequestHandler):
 
     def show_home_page(self) -> None:
         sections = "".join(render_extension_section(extension) for extension in self.service.extensions)
-        navigation = "".join(
-            f"<li><a href='/category/{escape(category.value)}'>{escape(category_label(category))}</a></li>"
-            for category in CategoryGroup
-        )
         body = f"""
-<header><h1>News Intelligence Platform</h1></header>
-<nav><ul>{navigation}</ul></nav>
+<p class='page-meta'>Curated artificial intelligence progress and practical technology briefings.</p>
 {sections}
 """
-        html_content = render_html_page("Home", body)
+        html_content = render_html_page("Home", body, self.service.counts_by_category())
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
