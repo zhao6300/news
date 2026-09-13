@@ -50,14 +50,14 @@ The platform exposes `AI`, `Technology`, `Models`, and `Reviews` as first-class 
 - `/extensions/{slug}` — seeded extension listing.
 - `/category/{slug}` — category catalog with pagination.
 - `/article/{id}` — article detail page.
-- `/search?q=` — keyword-based article search.
+- `/search?q=` — keyword-based article search and optional category filter.
 - `/login` — login form and session creation.
 - `/logout` — session revocation.
 - `/health` — process status check.
 
-Pagination supports `?page=` and `?page_size=1..50`.
+Pagination supports `?page=` and `?page_size=1..50`; search accepts an optional `category` slug such as `models`.
 
 ## Known next steps
 
 1. Connect the ingestion scheduler to startup and expose a diagnostics endpoint.
-2. Add category filters, article result counts, and richer search.
+2. Add source-specific views and article result counts.
