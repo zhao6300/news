@@ -161,7 +161,7 @@ Scope: crawl 5 million URLs using a scalable crawl plan and chunk-size 2.
 
 Acceptance:
 
-- The crawl map supports 5 million deterministic URLs.
+- The crawl map supports exactly 5 million deterministic URLs from 1 to 5,000,000 inclusive.
 - The crawl component supports name, description, plan, amount, and protected saver interface.
 - Setting `amount` fails when unsupported by the crawl type.
 - Google and Bing adapters implement caching and NoCcache behavior where required.
