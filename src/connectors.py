@@ -122,9 +122,13 @@ class ArticleIngestionScheduler:
 
     def _save_if_new(self, article: Article) -> None:
         try:
-            self.repository.get(article.id)
-        except KeyError:
+            existing = self.repository.get(article.id)
+        except KeyError as missing:
             self.repository.add(article)
+            return
+        if existing == article:
+            return
+        self.repository.update(article)
 
 
 class RssItemConnector:

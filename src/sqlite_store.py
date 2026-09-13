@@ -73,6 +73,11 @@ class SQLiteArticleLayer(RepositoryLayer):
         if cursor.rowcount != 1:
             raise KeyError(article_id)
 
+    def update(self, article: Article) -> None:
+        self.get(article.id)
+        self.remove(article.id)
+        self.add(article)
+
     def list_page(self, category: CategoryGroup, page: int = 1, page_size: int = 10) -> Page:
         offset = (page - 1) * page_size
         with connect(self.database) as db:

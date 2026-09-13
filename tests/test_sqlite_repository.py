@@ -44,3 +44,15 @@ def test_sqlite_category_counts_are_aggregated_in_one_query(tmp_path):
         CategoryGroup.TECH: 1,
         CategoryGroup.NEWS: 1,
     }
+
+
+def test_sqlite_refresh_updates_existing_article(tmp_path):
+    database = tmp_path / "updates.db"
+    repository = SQLiteArticleLayer(database)
+    repository.add(_article(1))
+
+    repository.update(_article(1, rank=3))
+
+    article = repository.get(1)
+    assert article.rank == 3
+    assert repository.total == 1

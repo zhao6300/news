@@ -14,6 +14,11 @@ class RepositoryLayer:
     def get(self, article_id: int) -> Article:
         raise NotImplementedError
 
+    def update(self, article: Article) -> None:
+        self.get(article.id)
+        self.remove(article.id)
+        self.add(article)
+
     def remove(self, article_id: int) -> None:
         raise NotImplementedError
 
