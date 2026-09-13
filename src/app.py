@@ -19,6 +19,13 @@ def render_extension_section(extension: PlatformExtension) -> str:
     return f"<section id='{escape(extension.slug)}'><h2>{escape(extension.label)}</h2><ul>{entry_rows}</ul></section>"
 
 
+def render_article_items(articles: Sequence[Article]) -> str:
+    return "".join(
+        f"<li><a href='/article/{article.id}'><strong>{escape(article.title)}</strong></a><p>{escape(article.summary)}</p></li>"
+        for article in articles
+    )
+
+
 def render_login_form(message: str | None = None) -> str:
     notice = f"<p>{escape(message)}</p>" if message else ""
     return f"""<main><h1>Sign In</h1>{notice}
@@ -148,10 +155,7 @@ class PortalHandler(BaseHTTPRequestHandler):
         page = max(1, int(query.get("page", ["1"])[0]))
         page_size = min(50, max(1, int(query.get("page_size", ["10"])[0])))
         result = self.service.list_articles(category, page=page, page_size=page_size)
-        article_rows = "".join(
-            f"<li><a href='/article/{article.id}'><strong>{escape(article.title)}</strong></a><p>{escape(article.summary)}</p></li>"
-            for article in articles
-        )
+        article_rows = render_article_items(result.items)
         pagination = self.render_pagination(page, page_size, result.total)
         html_content = render_html_page(
             str(category),

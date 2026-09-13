@@ -7,7 +7,7 @@ from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
 
 from extensions.builtin import builtin_collections
-from app import PortalHandler, render_extension_section
+from app import PortalHandler, render_article_items, render_extension_section
 from auth import AccountManager, demo_account_manager
 from sessions import SessionManager
 from services import InMemoryPlatformService
@@ -68,6 +68,15 @@ def test_article_detail_is_served():
     repository.register(_article(0, CategoryGroup.TECH))
 
     assert service.get_article(1).title == "Example 0"
+
+
+def test_category_page_renders_article_results():
+    service = InMemoryPlatformService(builtin_collections())
+    repository = InMemoryRepositoryLayer()
+    service.repository = repository
+    repository.register(_article(0, CategoryGroup.TECH))
+
+    assert "Example 0" in render_article_items(service.list_articles(CategoryGroup.TECH).items)
 
 
 def test_home_page_is_served_by_runtime_handler():
