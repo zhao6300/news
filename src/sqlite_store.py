@@ -1,0 +1,116 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from pathlib import Path
+from sqlite3 import Connection, connect
+
+from scaffold import Article, CategoryGroup
+from storage import Page
+
+
+class SQLiteArticleLayer:
+    def __init__(self, database: Path | str = "portal.db") -> None:
+        self.database = Path(database)
+        self.create()
+
+    def create(self) -> None:
+        with connect(self.database) as db:
+            db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS articles (
+                    id INTEGER PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    tags TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    category_id TEXT NOT NULL,
+                    rank INTEGER NOT NULL,
+                    published_at TEXT NOT NULL
+                )
+                """,
+            )
+            db.commit()
+
+    def add(self, article: Article) -> None:
+        with connect(self.database) as db:
+            db.execute(
+                """
+                INSERT INTO articles
+                    (id, title, url, summary, tags, source, category_id, rank, published_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    article.id,
+                    article.title,
+                    article.url,
+                    article.summary,
+                    "".join(article.tags),
+                    article.source,
+                    article.category_id,
+                    article.rank,
+                    article.published_at.isoformat(),
+                ),
+            )
+            db.commit()
+
+    def get(self, article_id: int) -> Article:
+        with connect(self.database) as db:
+            row = db.execute("SELECT * FROM articles WHERE id = ?", (article_id,)).fetchone()
+        if row is None:
+            raise KeyError(article_id)
+        return Article(
+            id=row[0],
+            title=row[1],
+            url=row[2],
+            summary=row[3],
+            tags=tuple(row[4].split(",")),
+            source=row[5],
+            category_id=CategoryGroup(row[6]),
+            rank=row[7],
+            published_at=datetime.fromisoformat(row[8]),
+        )
+
+    def remove(self, article_id: int) -> None:
+        with connect(self.database) as db:
+            cursor = db.execute("DELETE FROM articles WHERE id = ?", (article_id,))
+            db.commit()
+        if cursor.rowcount != 1:
+            raise KeyError(article_id)
+
+    def list_page(self, category: CategoryGroup, page: int = 1, page_size: int = 10) -> Page:
+        offset = (page - 1) * page_size
+        with connect(self.database) as db:
+            rows = db.execute(
+                """
+                SELECT * FROM articles
+                WHERE category_id = ?
+                ORDER BY rank DESC, published_at DESC, id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (category.value, page_size, offset),
+            ).fetchall()
+            count = db.execute(
+                "SELECT COUNT(*) FROM articles WHERE category_id = ?",
+                (category.value,),
+            ).fetchone()[0]
+        items = [
+            Article(
+                id=row[0],
+                title=row[1],
+                url=row[2],
+                summary=row[3],
+                tags=tuple(row[4].split(",")),
+                source=row[5],
+                category_id=CategoryGroup(row[6]),
+                rank=row[7],
+                published_at=datetime.fromisoformat(row[8]),
+            )
+            for row in rows
+        ]
+        return Page(items=items, page=page, page_size=page_size, total=count)
+
+    @property
+    def total(self) -> int:
+        with connect(self.database) as db:
+            return db.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
