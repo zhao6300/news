@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from html import escape
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 from auth import AccountManager
 from services import InMemoryPlatformService
+from sessions import SessionManager
 from scaffold import PlatformExtension
 
 
@@ -54,15 +56,23 @@ class PortalHandler(BaseHTTPRequestHandler):
         self,
         service: InMemoryPlatformService,
         account_manager: AccountManager,
+        session_manager: SessionManager,
         *args: object,
         **kwargs: object,
     ) -> None:
         self.service = service
         self.account_manager = account_manager
+        self.session_manager = session_manager
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
         path = urlparse(self.path).path
+        if path == "/logout":
+            self.handle_logout()
+            return
+        if not self.is_authenticated(path):
+            self.show_login_page()
+            return
         if path in {"/", "/home"}:
             self.show_home_page()
         elif path.startswith("/extensions/"):
@@ -86,6 +96,17 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.handle_login()
         else:
             self.show_not_found()
+
+    def session_token(self) -> str | None:
+        cookie = SimpleCookie(self.headers.get("Cookie", ""))
+        morsel = cookie.get("portal_session")
+        return morsel.value if morsel else None
+
+    def is_authenticated(self, path: str) -> bool:
+        return path in {"/login", "/health"} or self.current_session() is not None
+
+    def current_session(self):
+        return self.session_manager.resolve(self.session_token())
 
     def show_home_page(self) -> None:
         sections = "".join(render_extension_section(extension) for extension in self.service.extensions)
@@ -179,17 +200,36 @@ class PortalHandler(BaseHTTPRequestHandler):
         submitted = parse_qs(body.decode("utf-8"))
         email = submitted.get("email", [""])[0]
         password = submitted.get("password", [""])[0]
+        if not email or not password:
+            self.show_login_page("Email and password are required.", status=400)
+            return
         if self.account_manager.authenticate(email, password) is None:
             self.show_login_page("Invalid credentials.", status=401)
             return
+        session = self.session_manager.create(self.account_manager.authenticate(email, password))
         html_content = render_html_page(
             "Signed In",
             "<main><h1>Welcome back</h1><p>You are signed in to the platform.</p></main>",
         )
-        self.send_response(200)
+        self.send_response(303)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header(
+            "Set-Cookie",
+            f"portal_session={session.token}; Path=/; HttpOnly; SameSite=Lax",
+        )
+        self.send_header("Location", "/")
         self.end_headers()
         self.wfile.write(html_content.encode("utf-8"))
+
+    def handle_logout(self) -> None:
+        self.session_manager.revoke(self.session_token())
+        self.send_response(303)
+        self.send_header(
+            "Set-Cookie",
+            "portal_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
+        )
+        self.send_header("Location", "/login")
+        self.end_headers()
 
     def log_message(self, message: str, *args: object) -> None:
         pass

@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 from extensions.builtin import builtin_collections
 from app import PortalHandler, render_extension_section
 from auth import AccountManager, demo_account_manager
+from sessions import SessionManager
 from services import InMemoryPlatformService
 from scaffold import Article
 from scaffold import CategoryGroup
@@ -37,9 +38,10 @@ def test_extension_sections_are_rendered_through_service():
 def test_health_endpoint_is_api_reachable():
     service = InMemoryPlatformService(builtin_collections())
     account_manager = AccountManager(())
+    session_manager = SessionManager()
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        lambda *args, **kwargs: PortalHandler(service, account_manager, *args, **kwargs),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, *args, **kwargs),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -71,16 +73,17 @@ def test_article_detail_is_served():
 def test_home_page_is_served_by_runtime_handler():
     service = InMemoryPlatformService(builtin_collections())
     account_manager = AccountManager(())
+    session_manager = SessionManager()
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        lambda *args, **kwargs: PortalHandler(service, account_manager, *args, **kwargs),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, *args, **kwargs),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
         with urlopen(f"http://127.0.0.1:{server.server_port}/") as response:
             assert response.status == 200
-            assert "News Intelligence Platform" in response.read().decode("utf-8")
+            assert "Sign In" in response.read().decode("utf-8")
     finally:
         server.shutdown()
         server.server_close()
@@ -90,9 +93,10 @@ def test_home_page_is_served_by_runtime_handler():
 def test_login_submission_reports_valid_credentials():
     service = InMemoryPlatformService(builtin_collections())
     account_manager = demo_account_manager()
+    session_manager = SessionManager()
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        lambda *args, **kwargs: PortalHandler(service, account_manager, *args, **kwargs),
+        lambda *args, **kwargs: PortalHandler(service, account_manager, session_manager, *args, **kwargs),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -100,6 +104,7 @@ def test_login_submission_reports_valid_credentials():
     try:
         with urlopen(Request(f"http://127.0.0.1:{server.server_port}/login", data=data, method="POST")) as response:
             assert response.status == 200
+            assert "News Intelligence Platform" in response.read().decode("utf-8")
     finally:
         server.shutdown()
         server.server_close()

@@ -3,6 +3,7 @@ import os
 from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import demo_account_manager
+from sessions import SessionManager
 from scaffold import CategoryGroup
 from services import InMemoryPlatformService
 from storage import InMemoryRepositoryLayer
@@ -26,7 +27,13 @@ def main() -> None:
     port = int(os.getenv("PLATFORM_PORT", "8000"))
 
     def handler(*args: object, **kwargs: object):
-        return PortalHandler(service, demo_account_manager(), *args, **kwargs)
+        return PortalHandler(
+            service,
+            demo_account_manager(),
+            SessionManager(),
+            *args,
+            **kwargs,
+        )
 
     server = ThreadingHTTPServer((host, port), handler)
     print(f"Serving on http://{host}:{port}")
