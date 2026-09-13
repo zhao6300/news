@@ -235,6 +235,19 @@ def render_article_page(article: Article) -> str:
 </article>"""
 
 
+def article_search_payload(article: Article) -> dict[str, object]:
+    return {
+        "id": article.id,
+        "title": article.title,
+        "summary": article.summary,
+        "category": article.category_id.value,
+        "tags": list(article.tags),
+        "source": article.source,
+        "url": article.url,
+        "published_at": article.published_at.isoformat(),
+    }
+
+
 def render_html_page(
     title: str,
     body: str,
@@ -570,16 +583,7 @@ class PortalHandler(BaseHTTPRequestHandler):
                     "page": result.page,
                     "page_size": result.page_size,
                     "total": result.total,
-                    "items": [
-                        {
-                        "id": article.id,
-                        "title": article.title,
-                        "summary": article.summary,
-                        "category": article.category_id.value,
-                        "tags": list(article.tags),
-                        }
-                        for article in result.items
-                    ],
+                    "items": [article_search_payload(article) for article in result.items],
                 },
                 ensure_ascii=False,
             ).encode("utf-8"),
