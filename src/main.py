@@ -1,4 +1,5 @@
 import os
+from errno import EADDRINUSE
 from functools import partial
 from json import loads
 from pathlib import Path
@@ -154,7 +155,15 @@ def main() -> None:
             source_manager=source_manager,
         )
 
-    server = ThreadingHTTPServer((host, port), handler)
+    try:
+        server = ThreadingHTTPServer((host, port), handler)
+    except OSError as error:
+        if error.errno == EADDRINUSE:
+            raise RuntimeError(
+                f"端口 {port} 已被其他进程占用；请先结束占用该端口的进程，"
+                "或使用 PLATFORM_PORT 指定其他端口。"
+            ) from error
+        raise
     print(f"Serving on http://{host}:{port}")
     server.serve_forever()
 
