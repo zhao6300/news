@@ -112,7 +112,10 @@ class ArticleIngestionScheduler:
 
     def run(self) -> list[IngestionReport]:
         futures = {}
-        with ThreadPoolExecutor(thread_name_prefix="source-ingestion") as executor:
+        with ThreadPoolExecutor(
+            thread_name_prefix="source-ingestion",
+            max_workers=min(8, len(self.jobs)),
+        ) as executor:
             futures = {
                 job.slug: executor.submit(job.connector.fetch)
                 for job in self.jobs
