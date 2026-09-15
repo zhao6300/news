@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from threading import Barrier
+
 import pytest
 
 from connectors import (
@@ -15,6 +17,19 @@ from main import run_ingestion_reports
 from services import InMemoryPlatformService, PlatformServiceInterface
 from storage import InMemoryRepositoryLayer
 from scaffold import Article, CategoryGroup
+
+
+class ParallelSignalConnector:
+    def __init__(self, barrier: Barrier, slug: int):
+        self.barrier = barrier
+        self.slug = slug
+
+    def fetch(self):
+        try:
+            self.barrier.wait(timeout=3)
+        except TimeoutError as error:
+            raise TimeoutError("parallel test source timeout") from error
+        return []
 
 
 def test_connector_registry_register_and_get():
@@ -43,6 +58,24 @@ def test_ingestion_scheduler_reports_repository_jobs_without_duplicates():
     assert [report.succeeded for report in reports] == [True]
     assert [report.item_count for report in reports] == [6]
     assert repository.total == 6
+
+
+def test_article_ingestion_scheduler_fetches_sources_in_parallel():
+    barrier = Barrier(4)
+    jobs = tuple(
+        SourceJob(
+            f"parallel-{slug}",
+            f"Parallel {slug}",
+            ParallelSignalConnector(barrier, slug),
+        )
+        for slug in range(4)
+    )
+
+    reports = ArticleIngestionScheduler(jobs, InMemoryRepositoryLayer()).run()
+
+    assert barrier.parties == 4
+    assert [report.slug for report in reports] == [f"parallel-{slug}" for slug in range(4)]
+    assert all(report.succeeded for report in reports)
 
 
 def test_connector_repository_with_missing_connector():

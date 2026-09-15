@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
 from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from typing import Generic, Protocol, TypeVar
@@ -110,10 +111,16 @@ class ArticleIngestionScheduler:
         self.repository = repository
 
     def run(self) -> list[IngestionReport]:
+        futures = {}
+        with ThreadPoolExecutor(thread_name_prefix="source-ingestion") as executor:
+            futures = {
+                job.slug: executor.submit(job.connector.fetch)
+                for job in self.jobs
+            }
         reports = []
         for job in self.jobs:
             try:
-                fetched = list(job.connector.fetch())
+                fetched = list(futures[job.slug].result())
                 seen_article_ids = {article.id for article in fetched}
                 for article in fetched:
                     self._save_if_new(article)
