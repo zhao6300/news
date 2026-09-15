@@ -528,6 +528,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.handle_logout()
         elif path == "/api/sources":
             self.handle_add_source_api()
+        elif path == "/api/assistant":
+            self.handle_assistant_command_api()
         else:
             self.show_not_found()
 
@@ -761,14 +763,34 @@ class PortalHandler(BaseHTTPRequestHandler):
         self.wfile.write(dumps({"status": "ok"}, ensure_ascii=False).encode("utf-8"))
 
     def handle_assistant_api(self) -> None:
-        parsed = urlparse(self.path)
-        query = parse_qs(parsed.query)
-        context = query.get("q", [None])[0]
+        route, context = AssistantAdvice.resolve_route_context(self.path)
         advice = AssistantAdvice.suggest(
-            parsed.path,
+            route,
             context,
             auth=self.current_account() is not None,
         )
+        self.send_json_response(advice.payload)
+
+    def handle_assistant_command_api(self) -> None:
+        try:
+            raw_body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        except (ValueError, OSError):
+            self.send_json_response({"message": "任务数据必须是 JSON 对象。", "status": "failed"}, status=400)
+            return
+        try:
+            payload = loads(raw_body.decode("utf-8")) if raw_body else {}
+        except (UnicodeDecodeError, ValueError):
+            self.send_json_response({"message": "任务数据必须是 JSON 对象。", "status": "failed"}, status=400)
+            return
+        if not isinstance(payload, dict):
+            self.send_json_response({"message": "任务数据必须是 JSON 对象。", "status": "failed"}, status=400)
+            return
+        route = str(payload.get("route", "/"))
+        text = str(payload.get("text", ""))
+        if len(text) > 500:
+            self.send_json_response({"message": "任务描述不能超过 500 个字符。", "status": "failed"}, status=400)
+            return
+        advice = AssistantAdvice.plan_command(route, text, auth=self.current_account() is not None)
         self.send_json_response(advice.payload)
 
     def handle_logout(self) -> None:

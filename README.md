@@ -236,6 +236,7 @@ RSS 连接器会根据文章 URL 生成稳定 ID。来源不可访问、格式�
 - `GET /api/sources`：来源和拉取状态。
 - `GET /api/ingestion`：启动归集任务状态。
 - `GET /api/assistant?route=&q=`：路由/搜索场景的 AI 建议助手。
+- `POST /api/assistant`：把一行中文任务转换成分类、新闻、财经、模型或来源动作。
 - `GET /login` 和 `POST /login`：登录页和登录提交。
 - `GET /logout`：退出登录。
 - `GET /health`：服务健康检查。

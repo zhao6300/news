@@ -78,6 +78,11 @@ def test_public_shell_and_static_assets_are_separated():
             assert "filter-category" in frontend_script
             assert "filter-source" in frontend_script
             assert "articleCards = articles.items.map" in frontend_script
+            assert "assistant-question" in frontend_script
+            assert "AI 助手已连接" in frontend_script
+            assert "assistantStatus.textContent" in frontend_script
+            assert "assistantTitle.textContent" in frontend_script
+            assert "assistantActions.hidden" in frontend_script
     finally:
         server.shutdown()
         server.server_close()

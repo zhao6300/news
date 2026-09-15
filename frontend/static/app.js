@@ -5,6 +5,10 @@ const searchForm = document.querySelector("#search-form");
 const searchInput = document.querySelector("#search-input");
 const assistantLauncher = document.querySelector("#assistant-launcher");
 const assistantHost = document.querySelector("#assistant-host");
+const assistantTitle = document.querySelector("#assistant-title");
+const assistantStatus = document.querySelector("#assistant-status");
+const assistantCommand = document.querySelector("#assistant-command");
+const assistantActions = document.querySelector("#assistant-actions");
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -78,7 +82,7 @@ function renderError(error) {
 function hideAssistant() {
   if (!assistantHost || assistantHost.hidden) return;
   assistantHost.hidden = true;
-  assistantHost.innerHTML = "";
+  hideAssistant();
 }
 
 function renderAssistantPanel(advice) {
@@ -87,26 +91,42 @@ function renderAssistantPanel(advice) {
   }
   assistantHost.innerHTML = `
     <div class="assistant-panel">
-      <div class="assistant-panel__head">
-        <strong>${escapeHtml(advice.title)}</strong>
+<div class="assistant-panel__head">
+        <strong id="assistant-title">${escapeHtml(advice.title)}</strong>
         <button type="button" id="assistant-close">×</button>
       </div>
+      <p id="assistant-status" class="assistant-status">${escapeHtml(advice.status)}</p>
       <p>${escapeHtml(advice.message)}</p>
-      <ul>
+      <ul id="assistant-actions">
         ${advice.actions.map((action) => `
-          <li><a href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a></li>
+          <li>
+            <a href="${escapeHtml(action.href)}">
+              <strong>${escapeHtml(action.label)}</strong>
+              ${action.description ? `<small>${escapeHtml(action.description)}</small>` : ""}
+            </a>
+          </li>
         `).join("")}
       </ul>
+      <form id="assistant-question" class="assistant-question">
+        <input id="assistant-command" name="text" type="text" autocomplete="off" placeholder="告诉我你要收集的内容">
+        <button type="submit">规划</button>
+      </form>
     </div>`;
   assistantHost.hidden = false;
   const close = assistantHost.querySelector("#assistant-close");
   if (close) {
     close.addEventListener("click", () => {
-      hideAssistant();
+  hideAssistant();
       const launcher = document.querySelector("#assistant-launcher");
       if (launcher) launcher.focus();
     });
   }
+  assistantHost.querySelector("#assistant-question").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const text = new FormData(event.currentTarget).get("text").toString().trim();
+    const advice = await api("/api/assistant", { method: "POST", body: JSON.stringify({ route: location.pathname + location.search, text }) });
+    renderAssistantPanel(advice);
+  });
   close.focus();
   return;
 }
@@ -328,6 +348,7 @@ function renderSearch(query, result, page) {
   view.innerHTML = `
     <h1 class="page-heading">${query ? `搜索：${escapeHtml(query)}` : "搜索"}</h1>
     <p class="page-meta">${result.total} 条匹配内容</p>
+    <aside class="assistant-notice">AI 已基于关键词和来源结构生成这批候选。筛选关键词、分类或来源可以让下一步更收敛。</aside>
     <div class="content-grid two">${cards || '<p class="empty">没有匹配的内容</p>'}</div>${pager}`;
 }
 
@@ -336,6 +357,7 @@ function renderLogin(message = "", status = "") {
     <div class="login-panel">
       <h1 class="page-heading">登录</h1>
       ${message ? `<p class="message ${status === "failed" ? "error" : ""}">${escapeHtml(message)}</p>` : ""}
+      <p class="assistant-notice">登录后 AI 会继续处理来源、分类、摘要和长期任务。未登录时只提供公共入口。</p>
       <form class="form" id="login-form">
         <label for="email">邮箱</label>
         <input id="email" name="email" type="email" required>
@@ -372,6 +394,16 @@ function renderAccount(bootstrap) {
 
 function updateNavigation(bootstrap) {
   const currentPath = location.pathname;
+  if (assistantStatus && assistantTitle && assistantActions) {
+    if (!bootstrap.account) {
+      assistantStatus.textContent = "AI 未连接";
+      assistantTitle.textContent = "AI 助手离线";
+      assistantActions.hidden = true;
+    } else {
+      assistantStatus.textContent = "AI 助手已连接";
+      assistantActions.hidden = false;
+    }
+  }
   categoryNav.innerHTML = bootstrap.categories.map((category) => {
     const active = currentPath === `/category/${category.slug}` ? " active" : "";
     return `<a class="${active}" href="/category/${category.slug}">${escapeHtml(categoryLabel(category.slug))}<span>${category.article_count}</span></a>`;

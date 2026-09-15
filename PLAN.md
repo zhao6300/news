@@ -267,3 +267,16 @@ Acceptance:
 - Signed-in users receive advanced Suggestions while anonymous users see a sign-first route.
 - Escape and close button return focus to the assistant entry and keep the assistive role non-modal.
 - Frontend and backend use no third-party package.
+
+## Phase 30 — AI 任务规划与引导界面
+
+Scope: turn the static route assistant into a task planner that converts a one-line Chinese task into
+route-level actions, while keeping the panel visible, fast, and fully standard-library backed.
+
+Acceptance:
+
+- `POST /api/assistant` turns Chinese keywords into technology, finance, model, review, news, or source tasks.
+- Unknown tasks degrade into keyword search instead of an error.
+- Assistant actions expose a label and short reason, so the next step is always actionable.
+- Assistant panel includes status, action cards, and an inline command input.
+- Frontend does not introduce any script or CSS framework.
