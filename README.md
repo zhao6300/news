@@ -223,6 +223,7 @@ RSS 连接器会根据文章 URL 生成稳定 ID。来源不可访问、格式�
 - `GET /api/articles`：内容和分页。
 - `GET /api/articles/{id}`：文章详情。
 - `GET /api/extensions/{slug}`：指定来源内容。
+- `GET /api/articles?q=&category=&source=`：新闻列表筛选，关键词支持标题、摘要、来源和标签，`category` 可以留空。
 
 - `GET /`：首页和全部来源聚合。
 - `GET /extensions/{slug}`：指定来源的文章列表。

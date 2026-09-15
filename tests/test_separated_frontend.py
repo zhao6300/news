@@ -72,7 +72,9 @@ def test_public_shell_and_static_assets_are_separated():
             frontend_script = js_response.read().decode("utf-8")
             assert "async function api" in frontend_script
             assert 'credentials: "include"' in frontend_script
-            assert "renderHome(bootstrap, sources.sources, articles)" in frontend_script
+            assert "renderFilterControls" in frontend_script
+            assert "filter-category" in frontend_script
+            assert "filter-source" in frontend_script
             assert "articleCards = articles.items.map" in frontend_script
     finally:
         server.shutdown()

@@ -73,7 +73,52 @@ function renderError(error) {
   view.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
 }
 
-function renderHome(bootstrap, sources, articles) {
+function renderFilterControls(categories, sources, current = {}) {
+  const categoryOptions = categories
+    .map((category) => `<option value="${escapeHtml(category.slug)}" ${current.category === category.slug ? "selected" : ""}>${escapeHtml(category.label)}</option>`)
+    .join("");
+  const sourceOptions = sources
+    .map((source) => `<option value="${escapeHtml(source.label)}" ${current.source === source.label ? "selected" : ""}>${escapeHtml(source.label)}</option>`)
+    .join("");
+  return `
+    <section class="filter-panel" aria-label="新闻筛选">
+      <form id="news-filter-form">
+        <label for="filter-query">搜索新闻</label>
+        <input id="filter-query" name="q" type="search" value="${escapeHtml(current.query || "")}" placeholder="搜索标题、摘要、来源或标签">
+        <label for="filter-category">分类</label>
+        <select id="filter-category" name="category">
+          <option value="">全部分类</option>${categoryOptions}
+        </select>
+        <label for="filter-source">来源</label>
+        <select id="filter-source" name="source">
+          <option value="">全部来源</option>${sourceOptions}
+        </select>
+        <button type="submit">应用筛选</button>
+      </form>
+    </section>`;
+}
+
+function filterUrl(item, current = {}) {
+  const params = new URLSearchParams();
+  if (current.query) params.set("q", current.query);
+  if (current.category) params.set("category", current.category);
+  if (current.source) params.set("source", current.source);
+  if (item.page && item.page > 1) params.set("page", String(item.page));
+  const suffix = params.toString();
+  return `${item.path}${suffix ? `?${suffix}` : ""}`;
+}
+
+function renderPagination(current, result) {
+  if (result.total_pages <= 1) return "";
+  return `
+    <nav class="pagination page-meta">
+      <a href="${filterUrl({ path: current.path, ...current, page: Math.max(1, result.page - 1) }, current)}">上一页</a>
+      <span>第 ${result.page} / ${result.total_pages} 页</span>
+      <a href="${filterUrl({ path: current.path, ...current, page: Math.min(result.total_pages, result.page + 1) }, current)}">下一页</a>
+    </nav>`;
+}
+
+function renderHome(bootstrap, sources, articles, current = {}) {
   const sourceCards = sources.map((source) => `
     <a class="card source-card" href="/extensions/${escapeHtml(source.slug)}">
       <strong><span>${escapeHtml(source.label)}</span><span>${source.article_count}</span></strong>
@@ -83,10 +128,26 @@ function renderHome(bootstrap, sources, articles) {
   view.innerHTML = `
     <div class="page-heading">
       <h1>AI 信息平台</h1>
-      <p class="page-meta">来自新闻、技术、模型和评测来源的最新内容。</p>
+    <p class="page-meta">来自新闻、技术、模型和评测来源的最新内容。</p>
     </div>
+    ${renderFilterControls(bootstrap.categories, sources, current)}
     <section><h2 class="section-title">内容来源</h2><div class="cards">${sourceCards}</div></section>
-    <section><h2 class="section-title">最新内容</h2><div class="content-grid two">${articleCards || '<p class="empty">暂无内容</p>'}</div></section>`;
+    <section>
+      <h2 class="section-title">最新内容</h2>
+      <div class="content-grid two">${articleCards || '<p class="empty">没有匹配的新闻。</p>'}</div>
+      ${renderPagination(current, articles)}
+    </section>`;
+  document.querySelector("#news-filter-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const next = {
+      query: String(form.get("q") || "").trim(),
+      category: String(form.get("category") || ""),
+      source: String(form.get("source") || ""),
+    };
+    history.pushState({}, "", filterUrl({ path: "/", ...next, page: 1 }));
+    route();
+  });
 }
 
 function renderCategory(category, result, page) {
@@ -322,9 +383,17 @@ async function route() {
     }
 
     if (path === "/") {
+      const current = {
+        query: search.get("q") || "",
+        category: search.get("category") || "",
+        source: search.get("source") || "",
+      };
       const sources = await api("/api/sources");
-      const articles = await api("/api/articles");
-      renderHome(bootstrap, sources.sources, articles);
+      const articles = await api(`/api/articles${location.search}`);
+      renderHome(bootstrap, sources.sources, {
+        ...articles,
+        total_pages: Math.max(1, Math.ceil(articles.total / articles.page_size)),
+      }, current);
       return;
     }
 

@@ -857,16 +857,20 @@ class PortalHandler(BaseHTTPRequestHandler):
         try:
             text = query.get("category", [""])[0]
             category = self.service.get_category(text) if text else None
+            search_text = query.get("q", [""])[0]
+            source_text = query.get("source", [""])[0]
             page = max(1, int(query.get("page", ["1"])[0]))
             page_size = max(1, min(50, int(query.get("page_size", ["12"])[0])))
         except (KeyError, TypeError, ValueError):
             self.show_not_found()
             return
-        if category is None:
-            articles = [article for extension in self.service.get_extensions() for article in extension.entries]
-            result = Page(articles, page, page_size, len(articles))
-        else:
-            result = self.service.list_articles(category, page=page, page_size=page_size)
+        result = self.service.list_articles(
+            category=category,
+            page=page,
+            page_size=page_size,
+            query=search_text,
+            source=source_text,
+        )
         total_pages = max(1, (result.total + result.page_size - 1) // result.page_size)
         payload = {
             "items": [article_search_payload(article) for article in result.items],
