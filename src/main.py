@@ -17,13 +17,17 @@ from searchers import InMemorySearchEngine
 from storage import InMemoryRepositoryLayer, RepositoryLayer
 from sqlite_store import SQLiteArticleLayer
 from http.server import ThreadingHTTPServer
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 
 def read_feed(url: str, timeout: int = 10) -> str:
     if not isinstance(timeout, int) or timeout < 1:
         raise ValueError("Feed timeout must be a positive integer.")
-    with urlopen(url, timeout=timeout) as response:
+    request = Request(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (compatible; NewsPlatform/1.0)"},
+    )
+    with urlopen(request, timeout=timeout) as response:
         return response.read().decode("utf-8")
 
 

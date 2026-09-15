@@ -9,6 +9,7 @@ from typing import Generic, Protocol, TypeVar
 from collections.abc import Callable
 from urllib.parse import urlsplit
 from xml.etree import ElementTree
+from xml.etree.ElementTree import Element
 
 from re import fullmatch, sub
 
@@ -177,6 +178,23 @@ class SourceAdditionResult:
     article_count: int
 
 
+@dataclass(frozen=True, slots=True)
+class SourceOption:
+    id: str
+    label: str
+    category_id: CategoryGroup
+    feed_url: str
+
+    @property
+    def public_payload(self) -> dict[str, str]:
+        return {
+            "id": self.id,
+            "label": self.label,
+            "category": self.category_id.value,
+            "feed_url": self.feed_url,
+        }
+
+
 class RuntimeSourceManager:
     def __init__(
         self,
@@ -195,6 +213,82 @@ class RuntimeSourceManager:
         self._registrations: dict[str, RssSourceRegistration] = {}
 
     @classmethod
+    def source_options(cls) -> tuple[SourceOption, ...]:
+        return (
+            SourceOption(
+                "tech-hacker-news",
+                "Hacker News",
+                CategoryGroup.TECH,
+                "https://news.ycombinator.com/rss",
+            ),
+            SourceOption(
+                "tech-ars-technica",
+                "Ars Technica",
+                CategoryGroup.TECH,
+                "https://feeds.arstechnica.com/arstechnica/index",
+            ),
+            SourceOption(
+                "tech-the-verge",
+                "The Verge",
+                CategoryGroup.TECH,
+                "https://www.theverge.com/rss/index.xml",
+            ),
+            SourceOption(
+                "tech-techcrunch",
+                "TechCrunch",
+                CategoryGroup.TECH,
+                "https://techcrunch.com/feed/",
+            ),
+            SourceOption(
+                "tech-wired",
+                "Wired",
+                CategoryGroup.TECH,
+                "https://www.wired.com/feed/rss",
+            ),
+            SourceOption(
+                "tech-ieee-spectrum",
+                "IEEE Spectrum",
+                CategoryGroup.TECH,
+                "https://spectrum.ieee.org/feeds/feed.rss",
+            ),
+            SourceOption(
+                "tech-engadget",
+                "Engadget",
+                CategoryGroup.TECH,
+                "https://www.engadget.com/rss.xml",
+            ),
+            SourceOption(
+                "finance-market-watch",
+                "MarketWatch",
+                CategoryGroup.FINANCE,
+                "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+            ),
+            SourceOption(
+                "finance-cnbc",
+                "CNBC",
+                CategoryGroup.FINANCE,
+                "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+            ),
+            SourceOption(
+                "finance-yahoo",
+                "Yahoo Finance",
+                CategoryGroup.FINANCE,
+                "https://finance.yahoo.com/news/rssindex",
+            ),
+            SourceOption(
+                "finance-investing-com",
+                "Investing.com",
+                CategoryGroup.FINANCE,
+                "https://www.investing.com/rss/news_285.rss",
+            ),
+            SourceOption(
+                "finance-cbc-business",
+                "CBC Business",
+                CategoryGroup.FINANCE,
+                "https://www.cbc.ca/webfeed/rss/rss-business",
+            ),
+        )
+
     def _linked_source(
         cls,
         registration: RssSourceRegistration,
@@ -285,22 +379,38 @@ class RssItemConnector:
             root = ElementTree.fromstring(self.fetcher(self.feed_url))
         else:
             root = ElementTree.fromstring(self.feed_xml)
-        items = root.iter("item")
+        items = self._feed_items(root)
         if self.limit is not None:
             items = list(items)[: self.limit]
         return [self._article_from_item(item) for item in items]
 
+    @staticmethod
+    def _local_name(element: Element) -> str:
+        return element.tag.rsplit("}", maxsplit=1)[-1]
+
+    @classmethod
+    def _feed_items(cls, root: Element) -> list[Element]:
+        return [element for element in root.iter() if cls._local_name(element) in {"item", "entry"}]
+
+    @classmethod
+    def _descendant(cls, root: Element, tag: str) -> Element | None:
+        return next((element for element in root.iter() if cls._local_name(element) == tag), None)
+
     def _article_from_item(self, item: ElementTree.Element) -> Article:
         title = self._item_text(item, "title")
         url = self._item_text(item, "link")
-        summary = self._item_text(item, "description")
+        summary = self._optional_item_text(item, "description", "summary", "content")
         published_at = self._item_date(item)
-        tags = tuple(node.text.strip() for node in item.findall("category") if node.text and node.text.strip())
+        tags = tuple(
+            node.text.strip()
+            for node in item.iter()
+            if self._local_name(node) == "category" and node.text and node.text.strip()
+        )
         return Article(
             id=self._article_id(url),
             title=title,
             url=url,
-            summary=summary,
+            summary=summary or "暂无摘要。",
             tags=tags,
             source=self.source,
             category_id=self.category_id,
@@ -309,18 +419,48 @@ class RssItemConnector:
         )
 
     @staticmethod
-    def _item_text(item: ElementTree.Element, tag: str) -> str:
-        node = item.find(tag)
-        if node is None or not node.text or not node.text.strip():
-            raise ValueError(f"RSS item is missing {tag}.")
-        return node.text.strip()
+    def _item_text(item: Element, tag: str) -> str:
+        for node in item.iter():
+            if node.tag.rsplit("}", maxsplit=1)[-1] != tag:
+                continue
+            if tag == "link":
+                alternate = node.attrib.get("href") or node.text
+                alternate = (alternate or "").strip()
+                if alternate:
+                    return alternate
+            if node.text and node.text.strip():
+                return node.text.strip()
+        raise ValueError(f"RSS item is missing {tag}.")
 
-    @staticmethod
-    def _item_date(item: ElementTree.Element) -> datetime:
-        node = item.find("pubDate")
+    @classmethod
+    def _optional_item_text(cls, item: Element, *tags: str) -> str:
+        for tag in tags:
+            node = cls._descendant(item, tag)
+            if node is not None and node.text and node.text.strip():
+                return node.text.strip()
+        return ""
+
+    @classmethod
+    def _item_date(cls, item: Element) -> datetime:
+        node = None
+        for tag in ("pubDate", "updated", "published"):
+            node = cls._descendant(item, tag)
+            if node is not None and node.text and node.text.strip():
+                break
         if node is None or not node.text:
             raise ValueError("RSS item is missing pubDate.")
-        return parsedate_to_datetime(node.text.strip()).astimezone(UTC)
+        return cls._parse_date(node.text.strip())
+
+    @staticmethod
+    def _parse_date(value: str) -> datetime:
+        iso_value = value.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(iso_value)
+        except ValueError:
+            parsed = parsedate_to_datetime(value)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
 
     @staticmethod
     def _article_id(url: str) -> int:

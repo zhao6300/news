@@ -11,6 +11,19 @@ from storage import InMemoryRepositoryLayer
 from tests.test_rss_connector import RSS_XML
 
 
+def test_source_options_cover_technology_and_finance():
+    options = RuntimeSourceManager.source_options()
+    payload_by_id = {option.id: option.public_payload for option in options}
+
+    assert len(payload_by_id) == 12
+    assert payload_by_id["tech-hacker-news"]["category"] == "tech"
+    assert payload_by_id["finance-cnbc"]["category"] == "finance"
+    assert all(
+        option.category_id in {CategoryGroup.TECH, CategoryGroup.FINANCE}
+        for option in options
+    )
+
+
 def test_runtime_source_manager_adds_rss_to_repository():
     repository = InMemoryRepositoryLayer()
     service = InMemoryPlatformService(())

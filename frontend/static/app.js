@@ -25,6 +25,7 @@ function categoryLabel(slug) {
     ai: "人工智能",
     news: "新闻",
     tech: "技术",
+    finance: "财经",
     models: "模型",
     reviews: "评测",
   };
@@ -121,21 +122,29 @@ function renderArticle(article) {
     </article>`;
 }
 
-function renderSources(sources, categories = []) {
+function renderSources(sources, categories = [], options = []) {
   const categoryOptions = categories
     .map((category) => `<option value="${escapeHtml(category.slug)}">${escapeHtml(category.label)}</option>`)
+    .join("");
+  const presetOptions = options
+    .map((option) => `<option value="${escapeHtml(option.id)}">${escapeHtml(option.label)} · ${escapeHtml(categoryLabel(option.category))}</option>`)
     .join("");
   const form = `
     <section class="source-form-card">
       <h2 class="section-title">添加信息源</h2>
-      <p class="page-meta">填写来源名称、分类和 RSS 2.0 地址，提交后会立即读取最近内容。</p>
+      <p class="page-meta">填写来源名称、分类和 RSS 或 Atom 地址，提交后会立即读取最近内容。</p>
       <form class="form source-form" id="source-form">
+        <label for="source-preset">免费预置源</label>
+        <select id="source-preset" name="source_preset">
+          <option value="">手填来源</option>
+          ${presetOptions}
+        </select>
         <label for="source-label">来源名称</label>
         <input id="source-label" name="label" type="text" required maxlength="60" placeholder="例如：科技研究源">
         <label for="source-category">信息分类</label>
         <select id="source-category" name="category" required>${categoryOptions}</select>
         <label for="source-url">信息源地址</label>
-        <input id="source-url" name="feed_url" type="url" required placeholder="https://example.com/rss.xml">
+        <input id="source-url" name="feed_url" type="url" required placeholder="https://example.com/rss.xml 或 atom.xml">
         <label for="source-limit">每次拉取条数</label>
         <input id="source-limit" name="limit" type="number" min="1" max="100" value="20" required>
         <p id="source-form-message" class="message" aria-live="polite"></p>
@@ -176,6 +185,13 @@ function renderSources(sources, categories = []) {
         message.className = "message error";
       }
     }
+  });
+  document.querySelector("#source-preset").addEventListener("change", (event) => {
+    const preset = options.find((item) => item.id === event.currentTarget.value);
+    if (!preset) return;
+    document.querySelector("#source-label").value = preset.label;
+    document.querySelector("#source-category").value = preset.category;
+    document.querySelector("#source-url").value = preset.feed_url;
   });
 }
 
@@ -295,7 +311,7 @@ async function route() {
 
     if (path === "/sources") {
       const sources = await api("/api/sources");
-      renderSources(sources.sources || [], bootstrap.categories);
+      renderSources(sources.sources || [], bootstrap.categories, sources.source_options || []);
       return;
     }
 

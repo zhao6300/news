@@ -19,7 +19,12 @@ def test_read_feed_passes_configured_timeout_to_network_call():
         text = read_feed("https://example.com/feed", timeout=3)
 
         assert text == RSS_XML
-        urlopen.assert_called_once_with("https://example.com/feed", timeout=3)
+        urlopen.assert_called_once()
+        request = urlopen.call_args.args[0]
+        timeout = urlopen.call_args.kwargs["timeout"]
+        assert request.full_url == "https://example.com/feed"
+        assert timeout == 3
+        assert "NewsPlatform/1.0" in request.headers.get("User-agent", "")
 
 
 def test_configured_feed_timeout_must_be_positive():

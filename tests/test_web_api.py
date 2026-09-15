@@ -198,7 +198,7 @@ def test_login_failure_keeps_chinese_error():
         lambda *args, **kwargs: PortalHandler(
             service,
             demo_account_manager(),
-            SessionManager(),
+                SessionManager(),
             InMemorySearchEngine([]),
             *args,
             **kwargs,
@@ -346,6 +346,46 @@ def test_sources_api_adds_linked_source_to_service():
         assert payload["sources"][1]["label"] == "研究来源"
         assert payload["sources"][1]["slug"] == "source"
         assert payload["sources"][1]["ingestion"]["item_count"] == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_sources_api_lists_technology_and_finance_presets():
+    service = InMemoryPlatformService(builtin_collections())
+    service.repository = InMemoryRepositoryLayer()
+    source_manager = RuntimeSourceManager(
+        service.repository,
+        service,
+        InMemorySearchEngine([]),
+        [],
+        fetcher=lambda feed_url, timeout: RSS_XML,
+    )
+    session_manager = SessionManager()
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        lambda *args, **kwargs: PortalHandler(
+            service,
+            demo_account_manager(),
+            session_manager,
+            InMemorySearchEngine([]),
+                ingestion_reports=[],
+                source_manager=source_manager,
+                *args,
+                **kwargs,
+            ),
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        cookie = install_logged_in_cookie(session_manager)
+        with urlopen(Request(f"http://127.0.0.1:{server.server_port}/api/sources", headers={"Cookie": cookie})) as response:
+            payload = loads(response.read().decode("utf-8"))
+        option_map = {option["id"]: option for option in payload["source_options"]}
+        assert option_map["tech-hacker-news"]["category"] == "tech"
+        assert option_map["finance-cnbc"]["category"] == "finance"
+        assert len(option_map) == 12
     finally:
         server.shutdown()
         server.server_close()

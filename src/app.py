@@ -937,6 +937,9 @@ class PortalHandler(BaseHTTPRequestHandler):
         payload = {
             "status": "ok",
             "sources": sources,
+            "source_options": [
+                option.public_payload for option in self.source_manager.source_options()
+            ] if self.source_manager is not None else [],
         }
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")

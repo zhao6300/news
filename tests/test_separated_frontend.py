@@ -109,6 +109,7 @@ def test_public_bootstrap_reports_categories_and_account_state():
             "ai",
             "news",
             "tech",
+            "finance",
             "models",
             "reviews",
         ]

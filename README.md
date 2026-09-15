@@ -99,14 +99,14 @@ make run
 
 ## 新闻源接入
 
-平台内置统一的来源连接器协议。内置扩展已注册为 `builtin`。运行过程中可以登录后在 `/sources` 页面添加 RSS 2.0 信息源，
-也可以通过 `PLATFORM_FEEDS` 在启动前配置固定来源。
+平台内置统一的来源连接器协议。内置扩展已注册为 `builtin`。运行过程中可以登录后在 `/sources` 页面添加 RSS 或 Atom 信息源，
+页面会提供科技与财经的免费预置源，也可通过 `PLATFORM_FEEDS` 在启动前配置固定来源。
 
 登录后的手动添加只使用中文表单，字段如下：
 
 1. `来源名称`：1 到 60 个字符。
-2. `信息分类`：`ai`、`news`、`tech`、`models` 或 `reviews`。
-3. `信息源地址`：HTTP 或 HTTPS 的 RSS 2.0 地址。
+2. `信息分类`：`ai`、`news`、`tech`、`finance`、`models` 或 `reviews`。
+3. `信息源地址`：HTTP 或 HTTPS 的 RSS 或 Atom 地址。
 4. `每次拉取条数`：1 到 100。
 
 例如：
@@ -120,7 +120,12 @@ make run
 }
 ```
 
-启动前配置的 RSS 2.0 来源通过 `PLATFORM_FEEDS` 设置：
+免费预置源分为科技和财经两类：
+
+1. 科技：Hacker News、Ars Technica、The Verge、TechCrunch、Wired、IEEE Spectrum、Engadget。
+2. 财经：MarketWatch、CNBC、Yahoo Finance、Investing.com、CBC Business。
+
+启动前配置的 RSS 或 Atom 来源通过 `PLATFORM_FEEDS` 设置：
 
 ```bash
 PLATFORM_FEEDS='[
@@ -150,8 +155,8 @@ make run
 
 - `slug`：来源的唯一英文标识。
 - `source`：页面上显示的来源名称。
-- `category`：内容分类，必须是 `ai`、`news`、`technology`、`models` 或 `reviews`。
-- `url`：RSS 2.0 文档地址。
+- `category`：内容分类，必须是 `ai`、`news`、`tech`、`finance`、`models` 或 `reviews`。
+- `url`：RSS 或 Atom 文档地址。
 
 可选字段：
 
@@ -238,7 +243,7 @@ make integration
 
 ## 已知限制
 
-1. 外部 RSS 目前只支持 RSS 2.0 的 `item` 结构，不支持 Atom。
+1. 外部 RSS 已兼容 RSS/Atom 基础条目；复杂命名空间媒体字段仍不解析。
 2. 来源连接器配置目前来自 `PLATFORM_FEEDS`，重启后依赖同一个环境变量。
 3. 登录会话保存在进程内存中，重启需要重新登录。
 4. 内置示例数据用于验证平台结构，不是正式新闻数据。

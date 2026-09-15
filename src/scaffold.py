@@ -13,6 +13,7 @@ class CategoryGroup(StrEnum):
     AI = "ai"
     NEWS = "news"
     TECH = "tech"
+    FINANCE = "finance"
     MODELS = "models"
     REVIEWS = "reviews"
 
