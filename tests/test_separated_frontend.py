@@ -57,7 +57,9 @@ def test_public_shell_and_static_assets_are_separated():
             assert html_response.headers["Content-Type"].startswith("text/html")
             html = html_response.read().decode("utf-8")
             assert '<div id="view"' in html
+            assert '<button id="assistant-launcher"' in html
             assert "SSR Home" not in html
+            assert "frontend/core/main.js" not in html
             assert "/static/app.js" in html
 
         with urlopen(f"http://127.0.0.1:{server.server_port}/static/styles.css") as css_response:

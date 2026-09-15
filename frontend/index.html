@@ -17,9 +17,20 @@
       <a href="/search" data-auth>搜索</a>
     </div>
   </header>
+  <nav class="category-nav" id="category-nav" aria-label="内容分类"></nav>
+  <div class="masthead">
+    <form class="search-form" id="search-form">
+      <input id="search-input" type="search" placeholder="搜索标题、摘要、来源或标签" aria-label="搜索平台内容">
+      <button type="submit">搜索</button>
+    </form>
+    <div class="account-status" id="account-status"></div>
+  </div>
   <div id="view"></div>
+  <button id="assistant-launcher" type="button" aria-haspopup="dialog">
+    <span class="assistant-badge" aria-hidden="true">AI</span>助手
+  </button>
+  <div id="assistant-host" role="dialog" aria-modal="false" aria-label="AI助手" hidden></div>
 </div>
-<script type="module" src="/frontend/core/main.js"></script>
-<main id="root"></main>
+
 </body>
 </html>

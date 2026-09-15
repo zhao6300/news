@@ -6,7 +6,7 @@ PYTHONPATH := src,$(CURDIR)/frontend:$(CURDIR)
 .PHONY: run unit integration test
 
 run:
-	python frontend/core/main.py
+	python src/main.py
 
 TEST_FILES := $(wildcard tests/test_*.py)
 INTEGRATION_TEST_FILES := tests/test_separated_frontend.py tests/test_web_api.py tests/test_search_page.py tests/test_persistence_roundtrip.py tests/test_front_main.py

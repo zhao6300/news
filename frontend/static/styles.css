@@ -121,6 +121,33 @@ main.page {
 }
 .filter-panel button:hover { filter: brightness(.95); }
 
+#assistant-launcher,
+.assistant-panel {
+  position: fixed; z-index: 70;
+}
+
+#assistant-launcher {
+  right: 1.2rem; bottom: 1.2rem;
+  border: 0; border-radius: 99rem; padding: .78rem 1.1rem;
+  background: var(--accent); color: #fff; cursor: pointer; box-shadow: var(--shadow);
+  font-weight: 750;
+}
+
+#assistant-launcher:hover { filter: brightness(.95); }
+
+.assistant-panel {
+  right: 1.1rem; bottom: 4.6rem; width: min(92vw, 350px);
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius); padding: 1.1rem; box-shadow: var(--shadow);
+}
+.assistant-panel__head { display: flex; align-items: center; justify-content: space-between; gap: .7rem; }
+.assistant-panel button {
+  width: 1.9rem; height: 1.9rem; padding: 0; border: 0; border-radius: 99rem;
+  background: var(--surface); color: inherit; cursor: pointer; font-weight: 700;
+}
+.assistant-panel ul { margin: .8rem 0 0; padding: 0; list-style: none; display: grid; gap: .5rem; }
+.assistant-panel a { display: block; border: 1px solid var(--edge); border-radius: .6rem; padding: .58rem .7rem; }
+
 .content-grid { display: grid; gap: 1.1rem; list-style: none; }
 .content-grid.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); }
 

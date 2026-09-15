@@ -4,18 +4,20 @@ from html import escape
 from collections.abc import Sequence
 from json import dumps
 from json import loads
+from urllib.parse import urlparse
 from dataclasses import dataclass
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler
 import hashlib
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlencode
 
 from auth import (
     AccountManager,
     AuthenticatedAccount,
     resolve_authenticated_account,
 )
+from assistant import AssistantAdvice
 from connectors import IngestionReport
 from connectors import RuntimeSourceManager
 from services import InMemoryPlatformService
@@ -461,6 +463,9 @@ class PortalHandler(BaseHTTPRequestHandler):
         if path == "/api/bootstrap":
             self.handle_bootstrap_api()
             return
+        if path == "/api/assistant":
+            self.handle_assistant_api()
+            return
         if self.is_public_resource(path):
             self.handle_public_resource(path)
             return
@@ -494,6 +499,8 @@ class PortalHandler(BaseHTTPRequestHandler):
             self.handle_search_api()
         elif path == "/search":
             self.handle_search_page()
+        elif path == "/api/assistant":
+            self.handle_assistant_api()
         elif path == "/account":
             self.show_account_page()
         elif path == "/login":
@@ -752,6 +759,17 @@ class PortalHandler(BaseHTTPRequestHandler):
         )
         self.end_headers()
         self.wfile.write(dumps({"status": "ok"}, ensure_ascii=False).encode("utf-8"))
+
+    def handle_assistant_api(self) -> None:
+        parsed = urlparse(self.path)
+        query = parse_qs(parsed.query)
+        context = query.get("q", [None])[0]
+        advice = AssistantAdvice.suggest(
+            parsed.path,
+            context,
+            auth=self.current_account() is not None,
+        )
+        self.send_json_response(advice.payload)
 
     def handle_logout(self) -> None:
         self.session_manager.revoke(self.session_token())

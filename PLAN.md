@@ -253,3 +253,17 @@ Acceptance:
 - 来源 slug 自动规范为 ASCII，重复添加会被拒绝。
 - 拉取失败、非法 URL、非法分类和超出条目上限都以中文错误报告。
 - 不新增第三方依赖，也不允许未登录用户修改来源。
+
+## Phase 29 — AI-First 全局助手
+
+Scope: put a persistent route-aware AI co-pilot into the unified frontend and connect it to a small
+standard-library backend service.
+
+Acceptance:
+
+- Every application route shows the same bottom-right assistant entry and modal co-pilot.
+- `/api/assistant` returns Chinese route Suggestions for home, category, article, extension, search,
+  source, account, login, and fallback pages.
+- Signed-in users receive advanced Suggestions while anonymous users see a sign-first route.
+- Escape and close button return focus to the assistant entry and keep the assistive role non-modal.
+- Frontend and backend use no third-party package.

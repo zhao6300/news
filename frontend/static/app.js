@@ -3,6 +3,8 @@ const categoryNav = document.querySelector("#category-nav");
 const accountStatus = document.querySelector("#account-status");
 const searchForm = document.querySelector("#search-form");
 const searchInput = document.querySelector("#search-input");
+const assistantLauncher = document.querySelector("#assistant-launcher");
+const assistantHost = document.querySelector("#assistant-host");
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -71,6 +73,54 @@ function renderError(error) {
     history.replaceState({}, "", "/login");
   }
   view.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p>`;
+}
+
+function hideAssistant() {
+  if (!assistantHost || assistantHost.hidden) return;
+  assistantHost.hidden = true;
+  assistantHost.innerHTML = "";
+}
+
+function renderAssistantPanel(advice) {
+  if (!assistantHost) {
+    return;
+  }
+  assistantHost.innerHTML = `
+    <div class="assistant-panel">
+      <div class="assistant-panel__head">
+        <strong>${escapeHtml(advice.title)}</strong>
+        <button type="button" id="assistant-close">×</button>
+      </div>
+      <p>${escapeHtml(advice.message)}</p>
+      <ul>
+        ${advice.actions.map((action) => `
+          <li><a href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a></li>
+        `).join("")}
+      </ul>
+    </div>`;
+  assistantHost.hidden = false;
+  const close = assistantHost.querySelector("#assistant-close");
+  if (close) {
+    close.addEventListener("click", () => {
+      hideAssistant();
+      const launcher = document.querySelector("#assistant-launcher");
+      if (launcher) launcher.focus();
+    });
+  }
+  close.focus();
+  return;
+}
+
+async function showAssistant(path) {
+  try {
+    const search = new URLSearchParams({ route: path });
+    const query = new URLSearchParams(location.search).get("q");
+    if (query) search.set("q", query);
+    const advice = await api(`/api/assistant?${search.toString()}`);
+    renderAssistantPanel(advice);
+  } catch {
+    // 助手不影响主内容。
+  }
 }
 
 function renderFilterControls(categories, sources, current = {}) {
@@ -339,6 +389,7 @@ async function route() {
   renderLoading();
   document.title = "News Intelligence Platform";
   const [path, search] = [location.pathname, new URLSearchParams(location.search)];
+  await showAssistant(path);
   try {
     if (path === "/login") {
       const bootstrap = await api("/api/bootstrap");
@@ -436,6 +487,24 @@ window.addEventListener("click", (event) => {
   event.preventDefault();
   history.pushState({}, "", url.href);
   route();
+});
+
+if (assistantLauncher) {
+  assistantLauncher.addEventListener("click", () => {
+    if (!assistantHost.hidden) {
+      hideAssistant();
+      return;
+    }
+    showAssistant(location.pathname);
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && assistantHost && !assistantHost.hidden) {
+    hideAssistant();
+    const launcher = document.querySelector("#assistant-launcher");
+    if (launcher) launcher.focus();
+  }
 });
 
 searchForm.addEventListener("submit", (event) => {
