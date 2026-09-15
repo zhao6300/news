@@ -58,6 +58,8 @@ def test_public_shell_and_static_assets_are_separated():
             html = html_response.read().decode("utf-8")
             assert '<div id="view"' in html
             assert '<button id="assistant-launcher"' in html
+            assert '<link rel="stylesheet" href="/static/styles.css">' in html
+            assert '<header class="site-header">' in html
             assert "SSR Home" not in html
             assert "frontend/core/main.js" not in html
             assert "/static/app.js" in html
