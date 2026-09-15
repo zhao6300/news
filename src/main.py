@@ -5,12 +5,17 @@ from json import loads
 from pathlib import Path
 from typing import Sequence
 
-from extensions.builtin import builtin_collections
 from app import PortalHandler
 from auth import AccountManager, configured_account
-from connectors import ArticleIngestionScheduler, ConnectorRegistry, RssItemConnector, SourceJob
-from connectors import IngestionReport
-from connectors import RuntimeSourceManager
+from connectors import (
+    ArticleIngestionScheduler,
+    ConnectorRegistry,
+    IngestionReport,
+    RssItemConnector,
+    RuntimeSourceManager,
+    SourceJob,
+    default_feed_connectors,
+)
 from sessions import SessionManager
 from scaffold import CategoryGroup, PlatformExtension
 from services import InMemoryPlatformService
@@ -19,7 +24,6 @@ from storage import InMemoryRepositoryLayer, RepositoryLayer
 from sqlite_store import SQLiteArticleLayer
 from http.server import ThreadingHTTPServer
 from urllib.request import Request, urlopen
-
 
 def read_feed(url: str, timeout: int = 10) -> str:
     if not isinstance(timeout, int) or timeout < 1:
@@ -104,17 +108,19 @@ def run_ingestion_reports(
 def platform_components(
     database_path: str | None = None,
 ) -> tuple[Sequence, RepositoryLayer, InMemorySearchEngine, InMemoryPlatformService, Sequence[IngestionReport]]:
-    extensions = builtin_collections()
-    if not extensions:
-        raise RuntimeError("The platform must load at least one extension.")
-    feed_connectors = configured_rss_connectors(os.getenv("PLATFORM_FEEDS"))
+    configured_feeds = os.getenv("PLATFORM_FEEDS")
+    feed_connectors = (
+        configured_rss_connectors(configured_feeds)
+        if configured_feeds
+        else default_feed_connectors(read_feed)
+    )
+    extensions: Sequence[PlatformExtension] = ()
 
     repository = SQLiteArticleLayer(database_path) if database_path else InMemoryRepositoryLayer()
     ingestion_reports = run_ingestion_reports(extensions, repository, feed_connectors)
     if isinstance(repository, InMemoryRepositoryLayer):
         repository.next_id = max(repository.articles, default=0) + 1
-    if feed_connectors:
-        extensions = tuple(extensions) + tuple(feed_source_extensions(feed_connectors, repository.all()))
+    extensions = tuple(feed_source_extensions(feed_connectors, repository.all()))
 
     search_engine = InMemorySearchEngine(repository.all())
     service = InMemoryPlatformService(extensions)

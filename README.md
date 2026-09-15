@@ -100,8 +100,13 @@ make run
 
 ## 新闻源接入
 
-平台内置统一的来源连接器协议。内置扩展已注册为 `builtin`。运行过程中可以登录后在 `/sources` 页面添加 RSS 或 Atom 信息源，
-页面会提供科技与财经的免费预置源，也可通过 `PLATFORM_FEEDS` 在启动前配置固定来源。
+平台内置统一的来源连接器协议。启动时会直接抓取真实 RSS/Atom 来源；默认不再加载“内置示例数据”。
+运行过程中也可以登录后在 `/sources` 页面添加 RSS 或 Atom 信息源，或通过 `PLATFORM_FEEDS` 配置固定来源替换全部默认来源。
+
+默认真实来源包括：
+
+1. 科技：Hacker News、Ars Technica、The Verge、TechCrunch、Wired、IEEE Spectrum、Engadget。
+2. 财经：MarketWatch、CNBC、Yahoo Finance、Investing.com、CBC Business。
 
 登录后的手动添加只使用中文表单，字段如下：
 
@@ -245,7 +250,7 @@ make integration
 ## 已知限制
 
 1. 外部 RSS 已兼容 RSS/Atom 基础条目；复杂命名空间媒体字段仍不解析。
-2. 来源连接器配置目前来自 `PLATFORM_FEEDS`，重启后依赖同一个环境变量。
+2. 运行时手动添加的来源重启后会丢失；`PLATFORM_FEEDS` 或默认来源重启后会重新抓取。
 3. 登录会话保存在进程内存中，重启需要重新登录。
 4. 默认端口被占用时，启动会显示中文错误，需要结束占用进程或设置 `PLATFORM_PORT`。
 5. 内置示例数据用于验证平台结构，不是正式新闻数据。

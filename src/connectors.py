@@ -18,6 +18,7 @@ from scaffold import Article, CategoryGroup, PlatformExtension
 
 
 TItem = TypeVar("TItem")
+DEFAULT_FEED_LIMIT = 20
 
 
 class SourceConnector(Protocol[TItem]):
@@ -211,6 +212,23 @@ class RuntimeSourceManager:
         self.reports = reports
         self.fetcher = fetcher
         self._registrations: dict[str, RssSourceRegistration] = {}
+
+    @classmethod
+    def default_feed_connectors(
+        cls,
+        fetcher: Callable[[str, int], str],
+    ) -> list[RssItemConnector]:
+        return [
+            RssItemConnector(
+                option.id,
+                option.label,
+                option.category_id,
+                feed_url=option.feed_url,
+                fetcher=lambda feed_url, timeout=10: fetcher(feed_url, timeout),
+                limit=DEFAULT_FEED_LIMIT,
+            )
+            for option in cls.source_options()
+        ]
 
     @classmethod
     def source_options(cls) -> tuple[SourceOption, ...]:
@@ -469,3 +487,7 @@ class RssItemConnector:
             raise ValueError("RSS item link must include scheme and host.")
         digest = sha256(url.encode("utf-8")).digest()
         return int.from_bytes(digest[:8], "big") >> 1
+
+
+def default_feed_connectors(fetcher: Callable[[str, int], str]) -> list[RssItemConnector]:
+    return RuntimeSourceManager.default_feed_connectors(fetcher)

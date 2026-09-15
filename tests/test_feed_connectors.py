@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from main import configured_rss_connectors, platform_components, read_feed
+from connectors import DEFAULT_FEED_LIMIT
+from main import configured_rss_connectors, default_feed_connectors, platform_components, read_feed
 
 from tests.test_rss_connector import RSS_XML
 
@@ -70,6 +71,39 @@ def test_configured_feed_ingests_and_builds_extension(monkeypatch, tmp_path):
     extension = service.get_extension("research-rss")
     assert extension.label == "Research"
     assert len(extension.entries) == 1
-    assert repository.total == 7
-    assert [report.slug for report in reports] == ["builtin", "research-rss"]
+    assert repository.total == 1
+    assert [report.slug for report in reports] == ["research-rss"]
     assert configured_rss_connectors(getenv("PLATFORM_FEEDS"))[0].slug == "research-rss"
+
+
+def test_default_feed_connectors_use_real_rss_sources():
+    dummy_fetcher = lambda url: ""  # noqa: E731
+
+    connectors = default_feed_connectors(dummy_fetcher)
+
+    assert [connector.slug for connector in connectors] == [
+        "tech-hacker-news",
+        "tech-ars-technica",
+        "tech-the-verge",
+        "tech-techcrunch",
+        "tech-wired",
+        "tech-ieee-spectrum",
+        "tech-engadget",
+        "finance-market-watch",
+        "finance-cnbc",
+        "finance-yahoo",
+        "finance-investing-com",
+        "finance-cbc-business",
+    ]
+    assert all(str(connector.feed_url).startswith("https://") for connector in connectors)
+    assert all(connector.limit == DEFAULT_FEED_LIMIT for connector in connectors)
+
+
+def test_default_startup_does_not_ingest_placeholder_articles(monkeypatch, tmp_path):
+    monkeypatch.setattr("main.read_feed", lambda url, timeout: RSS_XML)
+    monkeypatch.delenv("PLATFORM_FEEDS", raising=False)
+
+    _, repository, _, _, reports = platform_components(tmp_path / "default.db")
+
+    assert repository.total > 0
+    assert all(report.slug != "builtin" for report in reports)
