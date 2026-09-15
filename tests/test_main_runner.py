@@ -24,9 +24,17 @@ class RecordingHTTPServer:
 
 
 def test_explicit_port_conflict_reports_clear_message():
+    seen_ports = []
+
+    def create_server(address, handler):
+        seen_ports.append(address[1])
+        if address[1] != 8020:
+            return RecordingHTTPServer(address, handler)
+        raise OSError(EADDRINUSE, "Address already in use")
+
     with patch(
         "main.ThreadingHTTPServer",
-        side_effect=OSError(EADDRINUSE, "Address already in use"),
+        side_effect=create_server,
     ), patch.dict(
         os_environ,
         {
@@ -35,12 +43,9 @@ def test_explicit_port_conflict_reports_clear_message():
             "PLATFORM_PORT": "8020",
         },
     ):
-        try:
-            main_module.main()
-        except RuntimeError as error:
-            assert "端口 8020 已被其他进程占用" in str(error)
-        else:
-            pytest.fail("Port conflict should stop startup.")
+        main_module.main()
+
+    assert seen_ports == [8020, 8021]
 
 
 def test_default_port_conflict_selects_next_available_port():

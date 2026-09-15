@@ -164,7 +164,7 @@ def main() -> None:
     requested_port = port
     explicit_port = "PLATFORM_PORT" in os.environ
     port_candidates = (
-        (requested_port,) if explicit_port else tuple(range(requested_port, requested_port + 20))
+        tuple(range(requested_port, requested_port + 20))
     )
 
     server = None
@@ -175,11 +175,6 @@ def main() -> None:
         except OSError as error:
             if error.errno != EADDRINUSE:
                 raise
-            if explicit_port:
-                raise RuntimeError(
-                    f"端口 {requested_port} 已被其他进程占用；请先结束占用该端口的进程，"
-                    "或使用其他 PLATFORM_PORT 值。"
-                ) from error
             continue
     if server is None:
         candidate_text = ", ".join(str(candidate) for candidate in port_candidates)
