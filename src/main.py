@@ -155,17 +155,35 @@ def main() -> None:
             source_manager=source_manager,
         )
 
-    try:
-        server = ThreadingHTTPServer((host, port), handler)
-    except OSError as error:
-        if error.errno == EADDRINUSE:
-            raise RuntimeError(
-                f"端口 {port} 已被其他进程占用；请先结束占用该端口的进程，"
-                "或使用 PLATFORM_PORT 指定其他端口。"
-            ) from error
-        raise
+    requested_port = port
+    explicit_port = "PLATFORM_PORT" in os.environ
+    port_candidates = (
+        (requested_port,) if explicit_port else tuple(range(requested_port, requested_port + 20))
+    )
+
+    server = None
+    for port in port_candidates:
+        try:
+            server = ThreadingHTTPServer((host, port), handler)
+            break
+        except OSError as error:
+            if error.errno != EADDRINUSE:
+                raise
+            if explicit_port:
+                raise RuntimeError(
+                    f"端口 {requested_port} 已被其他进程占用；请先结束占用该端口的进程，"
+                    "或使用其他 PLATFORM_PORT 值。"
+                ) from error
+            continue
+    if server is None:
+        candidate_text = ", ".join(str(candidate) for candidate in port_candidates)
+        raise RuntimeError(
+            f"端口 {candidate_text} 都被其他进程占用；请先结束占用的进程，"
+            "或使用其他 PLATFORM_PORT 值。"
+        )
     print(f"Serving on http://{host}:{port}")
     server.serve_forever()
+    server.server_close()
 
 
 if __name__ == "__main__":

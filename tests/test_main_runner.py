@@ -2,24 +2,28 @@ from __future__ import annotations
 
 from errno import EADDRINUSE
 from os import environ as os_environ
-
-from unittest.mock import patch
-
 from unittest.mock import patch
 
 import pytest
-
-from main import main
-
-
-def __import__():
-    with __import__("importlib").util.spec_from_file_location("main", "src/main.py") as module_spec:
-        main = __import__("importlib").util.module_from_spec(module_spec)
-        module_spec.loader.exec_module(main)
-        return main
+import main as main_module
 
 
-def test_startup_reports_clear_port_conflict():
+class RecordingHTTPServer:
+    def __init__(self, address, handler):
+        self.address = address
+        self.handler = handler
+
+    def close(self):
+        pass
+
+    def serve_forever(self):
+        pass
+
+    def server_close(self):
+        pass
+
+
+def test_explicit_port_conflict_reports_clear_message():
     with patch(
         "main.ThreadingHTTPServer",
         side_effect=OSError(EADDRINUSE, "Address already in use"),
@@ -28,11 +32,37 @@ def test_startup_reports_clear_port_conflict():
         {
             "PLATFORM_ACCOUNT_EMAIL": "owner@example.com",
             "PLATFORM_ACCOUNT_PASSWORD": "owner-password",
+            "PLATFORM_PORT": "8020",
         },
     ):
         try:
-            main()
+            main_module.main()
         except RuntimeError as error:
-            assert "PLATFORM_PORT 指定其他端口" in str(error)
+            assert "端口 8020 已被其他进程占用" in str(error)
         else:
             pytest.fail("Port conflict should stop startup.")
+
+
+def test_default_port_conflict_selects_next_available_port():
+    seen_ports = []
+
+    def create_server(address, handler):
+        seen_ports.append(address[1])
+        if address[1] == 8000:
+            raise OSError(EADDRINUSE, "Address already in use")
+        return RecordingHTTPServer(address, handler)
+
+    with patch.dict(
+        os_environ,
+        {
+            "PLATFORM_ACCOUNT_EMAIL": "owner@example.com",
+            "PLATFORM_ACCOUNT_PASSWORD": "owner-password",
+        },
+        clear=True,
+    ), patch(
+        "main.ThreadingHTTPServer",
+        side_effect=create_server,
+    ):
+        main_module.main()
+
+    assert seen_ports == [8000, 8001]
