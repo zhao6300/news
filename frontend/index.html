@@ -1,33 +1,27 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="按来源聚合新闻、技术、模型和评测内容的轻量级 AI 信息平台。">
-  <title>News Intelligence Platform</title>
-  <link rel="stylesheet" href="/static/styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI信息网</title>
+<script type="module" src="/static/app.js"></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="masthead">
-      <a class="site-title" href="/">News Intelligence</a>
-      <form class="search-form" id="search-form">
-        <label for="search-input">搜索</label>
-        <input id="search-input" type="search" autocomplete="off" placeholder="搜索新闻、技术、模型、评测">
-        <button type="submit">搜索</button>
-      </form>
-      <div class="account-status" id="account-status" aria-live="polite"></div>
+<div class="shell">
+  <header>
+    <div class="site-title">AI信息网</div>
+    <div class="menu">
+      <a href="/account" data-auth>账户中心</a>
+      <a href="/login" data-auth>登录</a>
+      <a href="/sources" data-auth>信息源</a>
+      <a href="/search" data-auth>搜索</a>
     </div>
-    <nav class="category-nav" id="category-nav" aria-label="信息分类"></nav>
   </header>
-  <main class="page">
-    <div id="view" aria-live="polite">
-      <p class="loading">正在加载平台内容…</p>
-    </div>
-  </main>
-  <footer>
-    <p>© 2026 News Intelligence Platform · 前后端分离体验</p>
-  </footer>
-  <script src="/static/app.js" type="module"></script>
+  <div id="view"></div>
+</div>
+<script type="module">
+import { render_home } from "/frontend/main.js";
+</script>
+<main id="root"></main>
 </body>
 </html>

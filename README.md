@@ -16,6 +16,7 @@
 ## 项目结构
 
 - `src/app.py` — Web 路由、页面渲染和登录会话处理。
+- `frontend/core/` — 独立前端核心：页面壳、静态资源和本地路由。
 - `frontend/` — 浏览器壳、静态资源和页面路由逻辑。
 - `src/auth.py` — 账号模型、密码校验和账号访问控制。
 - `src/services.py` — 分类、来源、文章查询和分页服务。
@@ -60,6 +61,8 @@ PLATFORM_ACCOUNT_EMAIL=owner@example.com \
 PLATFORM_ACCOUNT_PASSWORD=owner-password \
 make run
 ```
+
+默认入口是 `frontend/core/main.py`，能够独立启动前后端进程。
 
 默认地址为 `http://127.0.0.1:8000`。如果缺少账号环境变量，应用会启动失败，而不是使用不安全的默认账号。
 未设置 `PLATFORM_PORT` 时，应用会从默认端口开始，最多自动尝试后续 19 个端口。
